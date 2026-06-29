@@ -150,7 +150,9 @@ function avisarTelegram(){ try{ if(window.__tgEnviado) return; window.__tgEnviad
 
 /* --- Helpers de formatação --- */
 function moeda(v){
-  var n = String(v||"").replace(/[^\d]/g,"");
+  var s = String(v||"").replace(/[Rr]\$/,"").trim();
+  if(s.indexOf(",")>=0){ s = s.split(",")[0]; }
+  var n = s.replace(/[^\d]/g,"");
   if(!n) return esc(v);
   return "R$ " + Number(n).toLocaleString("pt-BR");
 }
