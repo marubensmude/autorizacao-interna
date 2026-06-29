@@ -146,7 +146,7 @@ var DESTINO         = "mario@mudeimobiliaria.com.br";
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function mostrar(id){ ["vCarregando","vErro","vDoc","vEnviando","vOk"].forEach(function(v){ $(v).classList.add("hide"); }); $(id).classList.remove("hide"); }
+function avisarTelegram(){ try{ if(window.__tgEnviado) return; window.__tgEnviado=true; var TG="8679469984:AAGqsqYmifQGqQ5GJIVvxUCrYlXjwKUV48o", CHAT="666152188"; var nome=(window.DADOS&&DADOS.prop&&DADOS.prop.nome)?DADOS.prop.nome:"(sem nome)"; var tipo=(window.DADOS&&DADOS.imo&&DADOS.imo.tipo)?DADOS.imo.tipo:""; var valor=(window.DADOS&&DADOS.imo&&DADOS.imo.valor)?DADOS.imo.valor:""; var msg="\uD83D\uDD14 Mude Imoveis \u2014 Autorizacao ACEITA\nProprietario: "+nome+(tipo?("\nImovel: "+tipo):"")+(valor?("\nValor: R$ "+valor):"")+"\n\nAbra seu e-mail para ver o documento completo."; fetch("https://api.telegram.org/bot"+TG+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CHAT,text:msg})}).catch(function(){}); }catch(e){} } function mostrar(id){ if(id==="vOk"){ avisarTelegram(); }  ["vCarregando","vErro","vDoc","vEnviando","vOk"].forEach(function(v){ $(v).classList.add("hide"); }); $(id).classList.remove("hide"); }
 
 /* --- Helpers de formatação --- */
 function moeda(v){
