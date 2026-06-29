@@ -298,29 +298,17 @@ function aceitar(){
   pegarIP().then(function(ip){
     var reg = { ip: ip, data: dataBR(), disp: navigator.userAgent };
     var corpo = reportHTML(DADOS, reg);
-    var word  = gerarWord(corpo);
     var params = {
       report_html: corpo,
-      content_word: word,
       to_email: DESTINO,
       subject: "Autorização de Venda (aceite) — " + (DADOS.prop.nome || "")
     };
-
-    function soCorpo(){
-      var p2 = { report_html: corpo, to_email: DESTINO, subject: params.subject };
-      return emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, p2);
-    }
-
-    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, params)
-      .then(function(){ mostrar("vOk"); })
-      .catch(function(){
-        /* fallback resiliente: reenvia só com o corpo (mesma lógica do sistema atual) */
-        soCorpo().then(function(){ mostrar("vOk"); })
-          .catch(function(err){
-            mostrar("vDoc");
-            alert("Não foi possível registrar a autorização agora. Verifique sua conexão e tente novamente.\n\nMotivo técnico: " + (err && (err.text||err.message) || "desconhecido"));
-          });
-      });
+    return emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, params);
+  })
+  .then(function(){ mostrar("vOk"); })
+  .catch(function(err){
+    mostrar("vDoc");
+    alert("Não foi possível registrar a autorização agora. Verifique sua conexão e tente novamente.\n\nMotivo técnico: " + (err && (err.text||err.message||err.status) || "desconhecido"));
   });
 }
 
