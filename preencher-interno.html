@@ -83,32 +83,17 @@ textarea{min-height:80px;resize:vertical}
     <div class="grid">
       <div class="full"><label class="req">Nome completo / Razão social</label><input id="p_nome" placeholder="Nome do proprietário"></div>
       <div><label>Tipo de pessoa</label><select id="p_tp"><option value="PF">Pessoa Física (CPF)</option><option value="PJ">Pessoa Jurídica (CNPJ)</option></select></div>
-      <div><label class="req">CPF / CNPJ</label><input id="p_doc" placeholder="Somente números ou formatado"></div>
+      <div><label class="req">CPF / CNPJ</label><input id="p_doc" inputmode="numeric" placeholder="000.000.000-00"></div>
       <div><label class="req">E-mail</label><input id="p_email" type="email" placeholder="email@exemplo.com"></div>
-      <div><label class="req">Telefone / WhatsApp</label><input id="p_tel" placeholder="(67) 90000-0000"></div>
+      <div><label class="req">Telefone / WhatsApp</label><input id="p_tel" inputmode="numeric" placeholder="(67)99999-9999"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2><span class="num">2</span>Imóvel</h2>
-    <div class="secdesc">Dados mínimos para identificar e precificar o imóvel autorizado.</div>
-    <div class="grid">
-      <div><label class="req">Tipo de imóvel</label>
-        <select id="i_tipo">
-          <option value="">Selecione</option>
-          <option>Casa</option><option>Apartamento</option><option>Terreno</option>
-          <option>Imóvel comercial</option><option>Sala comercial</option><option>Ponto comercial</option>
-          <option>Sítio</option><option>Chácara</option><option>Pesqueiro</option><option>Fazenda</option>
-        </select>
-      </div>
-      <div><label class="req">Valor de venda (R$)</label><input id="i_valor" inputmode="numeric" placeholder="Ex.: 850.000"></div>
-      <div><label class="req">Logradouro</label><input id="i_log" placeholder="Rua / Av."></div>
-      <div><label>Número</label><input id="i_num" placeholder="Nº"></div>
-      <div><label>Complemento</label><input id="i_comp" placeholder="Ex.: Apto 103, Sala 202, Bloco B"></div>
-      <div><label class="req">Bairro</label><input id="i_bairro" placeholder="Bairro"></div>
-      <div><label>Cidade / UF</label><input id="i_cidade" value="Dourados/MS"></div>
-      <div class="full"><label>CEP (opcional)</label><input id="i_cep" placeholder="79.800-000"></div>
-    </div>
+    <h2><span class="num">2</span>Imóveis</h2>
+    <div class="secdesc">Dados mínimos para identificar e precificar cada imóvel autorizado. Para o mesmo proprietário, você pode adicionar quantos imóveis quiser; será gerada uma única autorização com um só aceite.</div>
+    <div id="imoveisWrap"></div>
+    <button type="button" class="btn btn-sec" id="btnAddImovel" style="margin-top:4px">+ Adicionar outro imóvel</button>
   </div>
 
   <div class="card">
@@ -120,7 +105,7 @@ textarea{min-height:80px;resize:vertical}
       <div><label>Prazo da autorização</label>
         <select id="c_prazo">
           <option>30 dias</option><option>60 dias</option><option>90 dias</option>
-          <option selected>180 dias</option><option>365 dias</option><option>Até a venda</option>
+          <option>180 dias</option><option>365 dias</option><option selected>Até a venda</option>
         </select>
       </div>
       <div><label class="req">Corretor responsável</label>
@@ -165,7 +150,7 @@ var SENHA_INTERNA = "mude2026";
 
 /* Endereço PÚBLICO do site (GitHub Pages). Confira/edite se o seu repositório
    usar outro caminho. É daqui que o link de aceite vai ser montado. */
-var SITE_BASE = "https://marubensmude.github.io/autorizacao-mude/";
+var SITE_BASE = "https://marubensmude.github.io/autorizacao-interna/";
 
 /* O link de aceite sempre sai com endereço público https (clicável no WhatsApp).
    Se você abrir este arquivo localmente (file://) para testar, ele usa o SITE_BASE.
@@ -191,12 +176,117 @@ $("senha").addEventListener("keydown", function(e){ if(e.key === "Enter") entrar
 /* ---- Coleta e validação dos dados mínimos ---- */
 function val(id){ return ($(id).value || "").trim(); }
 
+/* ---- Máscaras e validações (Mude) ---- */
+function soDig(s){ return (String(s).match(/\d/g)||[]).join(''); }
+function fmtCPF(d){ d=d.slice(0,11);
+  if(d.length>9) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  if(d.length>6) return d.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  if(d.length>3) return d.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+  return d; }
+function fmtCNPJ(d){ d=d.slice(0,14);
+  if(d.length>12) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');
+  if(d.length>8) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');
+  if(d.length>5) return d.replace(/(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  if(d.length>2) return d.replace(/(\d{2})(\d{1,3})/,'$1.$2');
+  return d; }
+function maskDoc(){ var d=soDig($("p_doc").value); $("p_doc").value = (d.length<=11)?fmtCPF(d):fmtCNPJ(d); }
+function maskTel(){ var d=soDig($("p_tel").value).slice(0,11); var o="";
+  if(d.length>2){ var c=d.length>10?5:4; o="("+d.slice(0,2)+")"+d.slice(2,2+c); if(d.length>2+c) o+="-"+d.slice(2+c); }
+  else if(d.length>0){ o="("+d; }
+  $("p_tel").value=o; }
+/* ---- Imóveis (um ou vários para o mesmo proprietário) ---- */
+var TIPOS_IMOVEL = ["Casa","Apartamento","Terreno","Imóvel comercial","Sala comercial","Ponto comercial","Sítio","Chácara","Pesqueiro","Fazenda"];
+function blocoImovelHTML(){
+  var ops = '<option value="">Selecione</option>' + TIPOS_IMOVEL.map(function(t){ return '<option>'+t+'</option>'; }).join("");
+  return '<div class="imovel-block" style="border-top:1px solid #e7e2d8;padding-top:14px;margin-top:14px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +   '<strong class="imv-titulo" style="font-size:14px">Imóvel</strong>'
+    +   '<button type="button" class="imv-remove btn btn-sec" style="padding:4px 12px;font-size:12px">Remover</button>'
+    + '</div>'
+    + '<div class="grid">'
+    +   '<div><label class="req">Tipo de imóvel</label><select class="im-tipo">'+ops+'</select></div>'
+    +   '<div><label class="req">Valor de venda (R$)</label><input class="im-valor" inputmode="numeric" placeholder="R$ 0,00"></div>'
+    +   '<div class="full"><label>CEP</label><input class="im-cep" inputmode="numeric" maxlength="9" placeholder="00000-000"><div class="im-cepstatus" style="font-size:12px;color:var(--suave);margin-top:6px">Digite o CEP para preencher o endereço automaticamente. Não sabe o CEP? Preencha o endereço manualmente abaixo.</div></div>'
+    +   '<div><label class="req">Logradouro</label><input class="im-log" placeholder="Rua / Av."></div>'
+    +   '<div><label>Número</label><input class="im-num" placeholder="Nº"></div>'
+    +   '<div><label>Complemento</label><input class="im-comp" placeholder="Ex.: Apto 103, Sala 202, Bloco B"></div>'
+    +   '<div><label class="req">Bairro</label><input class="im-bairro" placeholder="Bairro"></div>'
+    +   '<div><label>Cidade / UF</label><input class="im-cidade" value="Dourados/MS"></div>'
+    + '</div></div>';
+}
+function renumerarImoveis(){
+  var bs = $("imoveisWrap").querySelectorAll(".imovel-block");
+  for(var i=0;i<bs.length;i++){
+    bs[i].querySelector(".imv-titulo").textContent = "Imóvel " + (i+1);
+    bs[i].querySelector(".imv-remove").style.display = (bs.length>1) ? "" : "none";
+  }
+}
+function addImovel(){ $("imoveisWrap").insertAdjacentHTML("beforeend", blocoImovelHTML()); renumerarImoveis(); }
+function cepStatusBloco(bloco, t){ var el=bloco.querySelector(".im-cepstatus"); if(el && t) el.textContent=t; }
+function buscaCepBloco(bloco, d){ cepStatusBloco(bloco,"Buscando endereço…");
+  fetch("https://viacep.com.br/ws/"+d+"/json/").then(function(r){return r.json();}).then(function(j){
+    if(j.erro){ cepStatusBloco(bloco,"CEP não encontrado. Preencha o endereço manualmente."); return; }
+    if(j.logradouro) bloco.querySelector(".im-log").value=j.logradouro;
+    if(j.bairro) bloco.querySelector(".im-bairro").value=j.bairro;
+    if(j.localidade) bloco.querySelector(".im-cidade").value=j.localidade+(j.uf?("/"+j.uf):"");
+    cepStatusBloco(bloco,"Endereço preenchido. Confira e informe o número e o complemento.");
+    bloco.querySelector(".im-num").focus();
+  }).catch(function(){ cepStatusBloco(bloco,"Não foi possível buscar o CEP agora. Preencha manualmente."); }); }
+function maskCepEl(el){ var bloco=el.closest(".imovel-block"); if(!bloco) return; var d=soDig(el.value).slice(0,8);
+  el.value = d.length>5 ? d.replace(/(\d{5})(\d{1,3})/,'$1-$2') : d;
+  if(d.length===8) buscaCepBloco(bloco,d); }
+function fmtValorEl(el){ var v=el.value; if(v.indexOf(",")>=0) v=v.split(",")[0]; var d=soDig(v).replace(/^0+/,""); el.value = d ? ("R$ "+Number(d).toLocaleString("pt-BR")+",00") : ""; }
+function emailOk(e){ e=String(e).toLowerCase();
+  if(!/^[a-z0-9](?:[a-z0-9._%+\-]*[a-z0-9])?@[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z]{2,})+$/.test(e)) return false;
+  var dom=e.split("@")[1], loc=e.split("@")[0];
+  var bad=["teste.com","test.com","example.com","exemplo.com","email.com","mailinator.com","tempmail.com","10minutemail.com","guerrillamail.com","yopmail.com","fake.com","abc.com"];
+  if(bad.indexOf(dom)>=0) return false;
+  if(/^(teste|test|asdf|aaaa|aaa|xxx|fulano|exemplo|nome)$/.test(loc)) return false;
+  return true; }
+function validaCPF(c){ c=soDig(c); if(c.length!==11||/^(\d)\1{10}$/.test(c)) return false;
+  var s=0,i,r; for(i=0;i<9;i++) s+=parseInt(c[i],10)*(10-i); r=(s*10)%11; if(r===10)r=0; if(r!==parseInt(c[9],10)) return false;
+  s=0; for(i=0;i<10;i++) s+=parseInt(c[i],10)*(11-i); r=(s*10)%11; if(r===10)r=0; return r===parseInt(c[10],10); }
+function validaCNPJ(c){ c=soDig(c); if(c.length!==14||/^(\d)\1{13}$/.test(c)) return false;
+  var b=[6,5,4,3,2,9,8,7,6,5,4,3,2];
+  function dv(base){ var s=0,i; for(i=0;i<base.length;i++) s+=parseInt(base[i],10)*b[b.length-base.length+i]; var r=s%11; return r<2?0:11-r; }
+  if(dv(c.slice(0,12))!==parseInt(c[12],10)) return false;
+  return dv(c.slice(0,13))===parseInt(c[13],10); }
+$("p_doc").addEventListener("input", maskDoc);
+$("p_tp").addEventListener("change", function(){ maskDoc(); $("p_doc").placeholder = ($("p_tp").value==="PJ")?"00.000.000/0000-00":"000.000.000-00"; });
+$("p_tel").addEventListener("input", maskTel);
+$("btnAddImovel").addEventListener("click", addImovel);
+$("imoveisWrap").addEventListener("input", function(e){ if(e.target.classList.contains("im-cep")) maskCepEl(e.target); });
+$("imoveisWrap").addEventListener("focusin", function(e){ if(e.target.classList.contains("im-valor")){ var v=e.target.value; if(v.indexOf(",")>=0) v=v.split(",")[0]; e.target.value=soDig(v); } });
+$("imoveisWrap").addEventListener("focusout", function(e){ if(e.target.classList.contains("im-valor")) fmtValorEl(e.target); });
+$("imoveisWrap").addEventListener("click", function(e){ var b=e.target.closest(".imv-remove"); if(b){ var bl=b.closest(".imovel-block"); if(bl){ bl.remove(); renumerarImoveis(); } } });
+addImovel(); /* começa com um imóvel */
+
+
 function coletar(){
   var faltando = [];
   function check(id, nome){ if(!val(id)) faltando.push(nome); return val(id); }
+  function bval(b, cls){ var el=b.querySelector("."+cls); return el ? (el.value||"").trim() : ""; }
+
+  var imoveis = [];
+  var blocos = $("imoveisWrap").querySelectorAll(".imovel-block");
+  for(var bi=0; bi<blocos.length; bi++){
+    var b = blocos[bi], rot = "Imóvel " + (bi+1) + ": ";
+    var im = {
+      tipo: bval(b,"im-tipo"), valor: bval(b,"im-valor"), log: bval(b,"im-log"),
+      num: bval(b,"im-num"), comp: bval(b,"im-comp"), bairro: bval(b,"im-bairro"),
+      cidade: bval(b,"im-cidade"), cep: bval(b,"im-cep")
+    };
+    if(!im.tipo) faltando.push(rot+"Tipo de imóvel");
+    if(!im.valor) faltando.push(rot+"Valor de venda");
+    else if(!soDig(im.valor)) faltando.push(rot+"Valor de venda inválido");
+    if(!im.log) faltando.push(rot+"Logradouro");
+    if(!im.bairro) faltando.push(rot+"Bairro");
+    imoveis.push(im);
+  }
+  if(!imoveis.length) faltando.push("Adicione ao menos um imóvel");
 
   var dados = {
-    v: 1,
+    v: 2,
     prop: {
       nome: check("p_nome","Nome do proprietário"),
       tp: val("p_tp"),
@@ -204,16 +294,8 @@ function coletar(){
       email: check("p_email","E-mail"),
       tel: check("p_tel","Telefone")
     },
-    imo: {
-      tipo: check("i_tipo","Tipo de imóvel"),
-      valor: check("i_valor","Valor de venda"),
-      log: check("i_log","Logradouro"),
-      num: val("i_num"),
-      comp: val("i_comp"),
-      bairro: check("i_bairro","Bairro"),
-      cidade: val("i_cidade"),
-      cep: val("i_cep")
-    },
+    imoveis: imoveis,
+    imo: imoveis[0] || {},
     com: {
       comissao: val("c_com") || "5",
       excl: val("c_excl"),
@@ -223,6 +305,11 @@ function coletar(){
     obs: val("c_obs"),
     em: new Date().toISOString()
   };
+
+  // validações de formato (obrigatoriedade já tratada acima)
+  if(dados.prop.doc){ var _nd=soDig(dados.prop.doc); if(!(_nd.length<=11?validaCPF(_nd):validaCNPJ(_nd))) faltando.push("CPF/CNPJ inválido"); }
+  if(dados.prop.email && !emailOk(dados.prop.email)) faltando.push("E-mail inválido");
+  if(dados.prop.tel && soDig(dados.prop.tel).length<10) faltando.push("Telefone incompleto");
   return { dados: dados, faltando: faltando };
 }
 
@@ -232,7 +319,7 @@ var ultimoLink = "";
 function gerar(){
   var r = coletar();
   if(r.faltando.length){
-    alert("Preencha os campos obrigatórios:\n\n• " + r.faltando.join("\n• "));
+    alert("Verifique os campos a seguir:\n\n• " + r.faltando.join("\n• "));
     return;
   }
   var json = JSON.stringify(r.dados);
@@ -285,13 +372,14 @@ $("btnPreview").addEventListener("click", function(){
 
 $("btnNovo").addEventListener("click", function(){
   if(!confirm("Limpar o formulário para uma nova autorização?")) return;
-  document.querySelectorAll("input,textarea").forEach(function(el){
+  document.querySelectorAll("#app input, #app textarea").forEach(function(el){
     if(el.id === "senha") return;
     if(el.id === "c_com"){ el.value = "5"; return; }
-    if(el.id === "i_cidade"){ el.value = "Dourados/MS"; return; }
     el.value = "";
   });
-  $("c_prazo").value = "180 dias";
+  $("c_prazo").value = "Até a venda";
+  $("imoveisWrap").innerHTML = "";
+  addImovel();
   $("resultado").classList.add("hide");
   ultimoLink = "";
   window.scrollTo({top:0, behavior:"smooth"});
