@@ -146,7 +146,7 @@ var DESTINO         = "mario@mudeimobiliaria.com.br";
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function avisarTelegram(){ try{ if(window.__tgEnviado) return; window.__tgEnviado=true; var TG="8679469984:AAGqsqYmifQGqQ5GJIVvxUCrYlXjwKUV48o", CHAT="666152188"; var nome=(window.DADOS&&DADOS.prop&&DADOS.prop.nome)?DADOS.prop.nome:"(sem nome)"; var tipo=(window.DADOS&&DADOS.imo&&DADOS.imo.tipo)?DADOS.imo.tipo:""; var valor=(window.DADOS&&DADOS.imo&&DADOS.imo.valor)?DADOS.imo.valor:""; var msg="\uD83D\uDD14 Mude Imoveis \u2014 Autorizacao ACEITA\nProprietario: "+nome+(tipo?("\nImovel: "+tipo):"")+(valor?("\nValor: R$ "+valor):"")+"\n\nAbra seu e-mail para ver o documento completo."; fetch("https://api.telegram.org/bot"+TG+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CHAT,text:msg})}).catch(function(){}); }catch(e){} } function mostrar(id){ if(id==="vOk"){ avisarTelegram(); }  ["vCarregando","vErro","vDoc","vEnviando","vOk"].forEach(function(v){ $(v).classList.add("hide"); }); $(id).classList.remove("hide"); }
+function avisarTelegram(){ try{ if(window.__tgEnviado) return; window.__tgEnviado=true; var TG="8679469984:AAGqsqYmifQGqQ5GJIVvxUCrYlXjwKUV48o", CHAT="666152188"; var nome=(window.DADOS&&DADOS.prop&&DADOS.prop.nome)?DADOS.prop.nome:"(sem nome)"; var ims=(window.DADOS&&DADOS.imoveis&&DADOS.imoveis.length)?DADOS.imoveis:((window.DADOS&&DADOS.imo)?[DADOS.imo]:[]); var det=""; if(ims.length>1){ det="\nImoveis: "+ims.length+" unidades"; } else if(ims.length===1){ det=(ims[0].tipo?("\nImovel: "+ims[0].tipo):"")+(ims[0].valor?("\nValor: R$ "+ims[0].valor):""); } var msg="\uD83D\uDD14 Mude Imoveis \u2014 Autorizacao ACEITA\nProprietario: "+nome+det+"\n\nAbra seu e-mail para ver o documento completo."; fetch("https://api.telegram.org/bot"+TG+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CHAT,text:msg})}).catch(function(){}); }catch(e){} } function mostrar(id){ if(id==="vOk"){ avisarTelegram(); }  ["vCarregando","vErro","vDoc","vEnviando","vOk"].forEach(function(v){ $(v).classList.add("hide"); }); $(id).classList.remove("hide"); }
 
 /* --- Helpers de formatação --- */
 function moeda(v){
@@ -187,14 +187,19 @@ function endereco(i){
   return p.join(" · ");
 }
 
+function imoveisDe(d){ return (d && d.imoveis && d.imoveis.length) ? d.imoveis : ((d && d.imo) ? [d.imo] : []); }
+
 function termoHTML(d){
   var comissao = (d.com.comissao||"5") + "%";
+  var n = imoveisDe(d).length;
+  var alvo = n>1 ? "dos imóveis acima descritos" : "do imóvel acima descrito";
+  var alvo2 = n>1 ? "os imóveis" : "o imóvel";
   var t = "O(a) proprietário(a) acima qualificado(a), na condição de OUTORGANTE, autoriza a "
     + "<b>MRM Negócios e Consultorias Imobiliárias Ltda. (Mude Imóveis)</b>, inscrita no CRECI/MS sob o nº 6052-J, "
-    + "na condição de OUTORGADA, a promover e intermediar a venda do imóvel acima descrito, "
+    + "na condição de OUTORGADA, a promover e intermediar a venda " + alvo + ", "
     + exclTxt(d.com.excl) + ", pelo prazo de " + prazoTxt(d.com.prazo) + ", "
     + "mediante comissão de " + esc(comissao) + " sobre o valor efetivo da venda, "
-    + "ficando a OUTORGADA autorizada a anunciar, divulgar e apresentar o imóvel a interessados, "
+    + "ficando a OUTORGADA autorizada a anunciar, divulgar e apresentar " + alvo2 + " a interessados, "
     + "agendar e realizar visitas e adotar as providências comerciais cabíveis à concretização do negócio.";
   var legal = "Esta autorização observa a Lei nº 6.530/1978 e o Decreto nº 81.871/1978 (exercício da profissão de corretor de imóveis), "
     + "a Resolução COFECI nº 1.404/2018, os artigos 722 a 729 do Código Civil (contrato de corretagem) "
@@ -210,10 +215,14 @@ function montar(d){
     linha("E-mail", d.prop.email) +
     linha("Telefone / WhatsApp", d.prop.tel);
 
-  $("secImo").innerHTML =
-    linha("Tipo de imóvel", d.imo.tipo) +
-    linha("Endereço", endereco(d.imo)) +
-    linha("Valor de venda", moeda(d.imo.valor));
+  var ims = imoveisDe(d);
+  $("secImo").innerHTML = ims.map(function(im, k){
+    var cab = ims.length>1 ? '<div class="row"><span class="k" style="font-weight:700;color:#b8924f">Imóvel '+(k+1)+'</span><span class="val"></span></div>' : '';
+    return cab +
+      linha("Tipo de imóvel", im.tipo) +
+      linha("Endereço", endereco(im)) +
+      linha("Valor de venda", moeda(im.valor));
+  }).join("");
 
   $("secCom").innerHTML =
     linha("Comissão", (d.com.comissao||"5")+"%") +
@@ -263,8 +272,11 @@ function reportHTML(d, reg){
         lin("Nome / Razão social", d.prop.nome)
       + lin(d.prop.tp==="PJ"?"CNPJ":"CPF", d.prop.doc||"Não informado")
       + lin("E-mail", d.prop.email) + lin("Telefone / WhatsApp", d.prop.tel))
-   + bloco("2. Imóvel",
-        lin("Tipo", d.imo.tipo) + lin("Endereço", endereco(d.imo)) + lin("Valor de venda", moeda(d.imo.valor)))
+   + bloco(imoveisDe(d).length>1 ? "2. Imóveis" : "2. Imóvel",
+        imoveisDe(d).map(function(im,k){
+          return (imoveisDe(d).length>1 ? '<div style="font-weight:bold;color:#b8924f;margin-top:'+(k?10:2)+'px">Imóvel '+(k+1)+'</div>' : '')
+            + lin("Tipo", im.tipo) + lin("Endereço", endereco(im)) + lin("Valor de venda", moeda(im.valor));
+        }).join(""))
    + bloco("3. Condições da intermediação",
         lin("Comissão", (d.com.comissao||"5")+"%")
       + lin("Exclusividade", d.com.excl==="sim"?"Com exclusividade":"Sem exclusividade")
@@ -315,7 +327,7 @@ function aceitar(){
 /* --- Inicialização --- */
 (function init(){
   try { if(window.emailjs) emailjs.init({ publicKey: EMAILJS_PUBLIC }); } catch(e){}
-  if(!DADOS || !DADOS.prop || !DADOS.imo){ mostrar("vErro"); return; }
+  if(!DADOS || !DADOS.prop || !imoveisDe(DADOS).length){ mostrar("vErro"); return; }
   montar(DADOS);
   $("btnAceitar").addEventListener("click", aceitar);
 })();
