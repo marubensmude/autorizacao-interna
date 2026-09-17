@@ -303,6 +303,61 @@ function gerarWord(htmlCorpo){
   return 'data:application/msword;base64,' + btoa(unescape(encodeURIComponent(doc)));
 }
 
+/* ===== Gerenciador de Autorizações (Supabase) ===== */
+var MUDE_DB = { url: "https://ghbikzuttsvqvzxsqkbu.supabase.co", key: "sb_publishable_RcR_4O-TwJ4vVCGZiCjv_g_rsrs-En4" };
+function mudeRPC(fn, body, ms){
+  var ctl = window.AbortController ? new AbortController() : null;
+  var t = ctl ? setTimeout(function(){ ctl.abort(); }, ms || 15000) : null;
+  return fetch(MUDE_DB.url + "/rest/v1/rpc/" + fn, { method: "POST", headers: { "Content-Type": "application/json", "apikey": MUDE_DB.key }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
+    .then(function(r){ if(t) clearTimeout(t); if(!r.ok) return r.text().then(function(x){ throw new Error("HTTP " + r.status + " " + x); }); return r.json(); });
+}
+/* Converte os dados do link na ficha padrão (mesmos rótulos do formulário do cliente) */
+function secoesDeDados(d){
+  var CRECI_COR = { "Mário Rubens": "CRECI/MS 5710" };
+  var ims = (d && d.imoveis && d.imoveis.length) ? d.imoveis : ((d && d.imo) ? [d.imo] : []);
+  function end(i){ return [i.log ? (i.log + (i.num ? ", " + i.num : "") + (i.comp ? ", " + i.comp : "")) : "", i.bairro, i.cidade].filter(Boolean).join(", "); }
+  function rs(v){ v = String(v || "").trim(); return v ? (/^R\$/.test(v) ? v : "R$ " + v) : ""; }
+  var p = d.prop || {}, c = d.com || {}, s = [];
+  s.push({ t: "1. Proprietário (Outorgante)", rows: [["Nome", p.nome || ""], ["Tipo", p.tp === "PJ" ? "Pessoa Jurídica" : "Pessoa Física"], ["CPF/CNPJ", p.doc || ""], ["E-mail", p.email || ""], ["WhatsApp", p.tel || ""]], paras: [] });
+  s.push({ t: "2. Intermediária (Outorgada)", rows: [["Empresa", "MRM Negócios e Consultorias Imobiliárias Ltda. — Mude Imóveis"], ["CRECI/MS", "6052-J"], ["Sede", "Dourados — MS"], ["Corretor responsável", d.corr ? (d.corr + (CRECI_COR[d.corr] ? " (" + CRECI_COR[d.corr] + ")" : "")) : ""]], paras: [] });
+  var i0 = ims[0] || {};
+  s.push({ t: "3. Imóvel objeto da autorização", rows: [["Tipo", i0.tipo || ""], ["Endereço", end(i0)], ["CEP", i0.cep || ""]], paras: [] });
+  if(ims.length > 1){
+    var rows = [], paras = [];
+    ims.slice(1).forEach(function(im, k){
+      rows.push(["Imóvel adicional " + (k + 1), ""]);
+      rows.push(["Tipo", im.tipo || ""]); rows.push(["Endereço", end(im)]); rows.push(["CEP", im.cep || ""]); rows.push(["Valor pretendido", rs(im.valor)]);
+    });
+    s.push({ t: "Outros imóveis do mesmo proprietário", rows: rows.map(function(r){ return r[0].indexOf("Imóvel adicional") === 0 ? [r[0], "—"] : r; }), paras: paras });
+  }
+  s.push({ t: "5. Observações do imóvel", rows: [], paras: d.obs ? [d.obs] : [] });
+  s.push({ t: "6. Condições comerciais", rows: [["Valor pretendido", rs(i0.valor)], ["Comissão", (c.comissao || "5") + "%"]], paras: [] });
+  s.push({ t: "7. Autorizações e divulgação", rows: [["Modalidade", c.excl === "sim" ? "Com exclusividade" : "Sem exclusividade"], ["Prazo de autorização", c.prazo || ""]], paras: [] });
+  return s;
+}
+
+function hashTxt(t){ var h = 5381; for(var i=0;i<t.length;i++){ h = ((h << 5) + h + t.charCodeAt(i)) | 0; } return (h >>> 0).toString(36).toUpperCase(); }
+function idDoAceite(){
+  if(DADOS && DADOS.id) return DADOS.id;
+  var m = (location.hash || "").match(/[#&]a=([^&]+)/);
+  return "INT-L" + hashTxt(m ? m[1] : JSON.stringify(DADOS || {}));
+}
+function textoSemTags(html){ var d = document.createElement("div"); d.innerHTML = html; return (d.textContent || "").replace(/\s+/g, " ").trim(); }
+function dadosAceiteParaGerenciador(reg, corpo){
+  var id = idDoAceite();
+  var secs = secoesDeDados(DADOS);
+  var termo = termoHTML(DADOS), partes = termo.split('<div class="legal">');
+  secs.push({ t: "9. Termo de autorização e fundamentos legais", rows: [], paras: [textoSemTags(partes[0]), textoSemTags(partes[1] || "")].filter(Boolean) });
+  var disp = (navigator.userAgent.split(")")[0].split("(")[1]) || navigator.platform || "";
+  var fuso = ""; try{ fuso = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; }catch(e){}
+  secs.push({ t: "10. Registro eletrônico do aceite", rows: [
+    ["Autorização de venda e divulgação", "Aceita pelo proprietário"], ["Consentimento LGPD", "Concedido"], ["Declaração de registro de acesso", "Aceita"],
+    ["Protocolo de registro", id], ["Data/hora do registro", reg.data], ["Endereço IP", reg.ip], ["Dispositivo", disp], ["Navegador", navigator.userAgent]], paras: [] });
+  return { id: id, protocolo: id, secoes: secs, dadosLink: DADOS, documentoHtml: corpo, corretor: DADOS.corr,
+    registro: { protocolo: id, dataHora: reg.data, ip: reg.ip, disp: disp, ua: navigator.userAgent, plataforma: navigator.platform || "",
+      idioma: navigator.language || "", fuso: fuso, tela: (window.screen ? screen.width + "×" + screen.height + " px" : ""), pagina: location.origin + location.pathname } };
+}
+
 /* --- Envio --- */
 function aceitar(){
   if(!DADOS) return;
@@ -315,7 +370,15 @@ function aceitar(){
       to_email: DESTINO,
       subject: "Autorização de Venda (aceite) — " + (DADOS.prop.nome || "")
     };
-    return emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, params);
+    var okBanco = false, okEmail = false, erro = null;
+    var pBanco = mudeRPC("autorizacao_aceitar", { p_id: idDoAceite(), p_obj: dadosAceiteParaGerenciador(reg, corpo) })
+      .then(function(){ okBanco = true; }).catch(function(e){ erro = erro || e; if(window.console) console.warn("Gerenciador:", e); });
+    var pEmail = (window.emailjs ? emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, params) : Promise.reject(new Error("serviço de e-mail não carregou")))
+      .then(function(){ okEmail = true; }).catch(function(e){ erro = e; });
+    return Promise.all([pBanco, pEmail]).then(function(){
+      if(okEmail || okBanco) return true;
+      throw erro || new Error("falha no envio");
+    });
   })
   .then(function(){ mostrar("vOk"); })
   .catch(function(err){
