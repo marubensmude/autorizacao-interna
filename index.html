@@ -158,7 +158,7 @@ var SITE_BASE = "https://marubensmude.github.io/autorizacao-interna/";
    Se abrir já pelo site publicado, usa a própria pasta automaticamente. */
 var ACEITE_URL = (location.protocol === "file:")
   ? SITE_BASE + "aceite.html"
-  : new URL("aceite.html", location.href).href;
+  : location.origin + "/autorizacao-interna/aceite.html";  /* fixo: nunca usar o aceite antigo de /autorizacao-mude/ */
 
 function $(id){ return document.getElementById(id); }
 
