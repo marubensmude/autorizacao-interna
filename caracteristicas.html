@@ -431,15 +431,14 @@ function enviarCliente(){
       respondidoEm:new Date().toISOString(), registro:{ ip:ip, data:agoraBR(), disp:navigator.userAgent } };
     var link=PAGINA+"#r="+pack(reg);
     var corpo=emailHTML(reg, link);
-    var params={ report_html:corpo, to_email:DESTINO, subject:"Características do imóvel — "+(reg.cli.nome||""), content_word:gerarWord(corpo) };
+    var params={ cliente:"Checklist de características · "+(reg.cli.nome||"Cliente"), tipo:(reg.imo&&reg.imo.tipo)||"", corretor:reg.corr||"", reply_to:reg.cli.email||"", report_html:corpo, to_email:DESTINO, message:"Checklist de características do imóvel respondido por "+(reg.cli.nome||"")+" ("+n+" itens)." };
     var db=fetch(SUPABASE_URL+"/rest/v1/rpc/checklist_responder",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},
       body:JSON.stringify({p_id:reg.id,p_obj:reg})}).then(function(r){ return r.ok; }).catch(function(){ return false; });
     var tg=fetch("https://api.telegram.org/bot"+TG+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({chat_id:TG_CHAT, disable_web_page_preview:true, text:"🔔 Mude Imoveis — Checklist de caracteristicas RECEBIDO\nCliente: "+(reg.cli.nome||"")+"\nImovel: "+((reg.imo&&reg.imo.tipo)||"")+" · "+((reg.imo&&reg.imo.end)||"")+"\nItens marcados: "+n+"\n\nAbrir no sistema (Editar, Imprimir, WhatsApp, Eliminar):\n"+link})})
       .then(function(r){ return r.ok; }).catch(function(){ return false; });
     var em=(window.emailjs? emailjs.send(EMAILJS_SERVICE,EMAILJS_TEMPLATE,params) : Promise.reject(new Error("e-mail indisponível")))
-      .catch(function(){ delete params.content_word; return window.emailjs? emailjs.send(EMAILJS_SERVICE,EMAILJS_TEMPLATE,params) : Promise.reject(new Error("e-mail indisponível")); })
-      .then(function(){ return true; }).catch(function(e){ window.__errEnvio=e; return false; });
+            .then(function(){ return true; }).catch(function(e){ window.__errEnvio=e; return false; });
     return Promise.all([em,tg,db]).then(function(r){ if(!r[0] && !r[1] && !r[2]) throw (window.__errEnvio||new Error("falha no envio")); });
   }).then(function(){ mostrarSo(["vOk"]); })
   .catch(function(err){ mostrarSo(["vCliente"]); alert("Não foi possível enviar agora. Verifique sua conexão e tente novamente.\n\nMotivo técnico: "+((err&&(err.text||err.message||err.status))||"desconhecido")); });
@@ -537,14 +536,14 @@ function iniciarInterno(){
   document.querySelectorAll(".tabs button").forEach(function(b){ b.onclick=function(){ aba(b.getAttribute("data-tab")); }; });
   $("btnSair").onclick=function(){ sb.auth.signOut().then(function(){ location.replace(location.pathname); }); };
   $("btnAtualizar").onclick=function(){ dbListar().then(renderLista); };
-  function novo(){ ["c_nome","c_tel","c_email","i_end","i_cond"].forEach(function(k){ $(k).value=""; }); $("i_tipo").selectedIndex=0; $("gerado").classList.add("hide"); ultimoLink=""; aba("tNovo"); setTimeout(function(){ $("c_nome").focus(); },150); }
+  function novo(){ ["c_nome","c_tel","c_email","i_end","i_cond"].forEach(function(k){ $(k).value=""; }); $("i_tipo").selectedIndex=0; $("gerado").classList.add("hide"); ultimoLink=""; $("btnEuMesmo").classList.remove("hide"); document.querySelector(".ou").classList.remove("hide"); aba("tNovo"); setTimeout(function(){ $("c_nome").focus(); },150); }
   $("btnNovo").onclick=novo; $("resNovo").onclick=novo;
   $("c_tel").addEventListener("input",function(){ this.value=fmtTel(this.value); });
   $("btnGerar").onclick=gerarLink;
   $("btnCopiar").onclick=function(){ navigator.clipboard.writeText(ultimoLink).then(function(){ $("btnCopiar").textContent="Link copiado ✓"; setTimeout(function(){ $("btnCopiar").textContent="Copiar link"; },1800); },function(){ alert("Copie manualmente o link acima."); }); };
   $("btnPrev").onclick=function(){ if(ultimoLink) window.open(ultimoLink,"_blank"); };
   $("btnWaLink").onclick=function(){ var d=JSON.parse($("gerado").getAttribute("data-d")); var n=telWa(d.cli.tel); window.open((n?("https://wa.me/"+n+"?text="):"https://wa.me/?text=")+encodeURIComponent(msgLink(d)),"_blank"); };
-  $("btnLimparForm").onclick=function(){ ["c_nome","c_tel","c_email","i_end","i_cond"].forEach(function(k){ $(k).value=""; }); $("gerado").classList.add("hide"); ultimoLink=""; };
+  $("btnLimparForm").onclick=function(){ ["c_nome","c_tel","c_email","i_end","i_cond"].forEach(function(k){ $(k).value=""; }); $("gerado").classList.add("hide"); ultimoLink=""; $("btnEuMesmo").classList.remove("hide"); document.querySelector(".ou").classList.remove("hide"); };
   $("btnEuMesmo").onclick=function(){ var d=coletar(); if(!d) return; d.status="respondido"; d.sel={}; d.obs=""; d.preenchidoPor="equipe"; d.respondidoEm=new Date().toISOString(); hist(d,"Checklist preenchido pela equipe no imóvel");
     dbInserir(d).then(function(o){ abrirEdicao(o.id); }).catch(erroBanco); };
   $("resVoltar").onclick=function(){ aba("tLista"); };
@@ -598,6 +597,7 @@ function gerarLink(){
     $("gerado").setAttribute("data-d",JSON.stringify(d));
     $("gerado").classList.remove("hide");
     $("codGerado").textContent=o.codigo?("Registrado como "+o.codigo):"";
+    $("btnEuMesmo").classList.add("hide"); document.querySelector(".ou").classList.add("hide");
   }).catch(function(e){ fim(); erroBanco(e); });
 }
 function msgLink(d){
