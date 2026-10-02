@@ -132,6 +132,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
 .userbar button{all:unset;cursor:pointer;color:var(--preto);border-bottom:1px solid var(--dourado)}
 .listhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .listhead .btn{padding:8px 14px;font-size:13px}
+.lh-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ou{text-align:center;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--suave);margin:14px 0 10px}
+.resnav{display:flex;justify-content:space-between;gap:12px}
 .lista .tx{min-width:0}
 .cod{color:var(--dourado);font-weight:500}
 @media(max-width:640px){
@@ -183,14 +186,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
     </header>
     <div class="userbar noprint"><span id="userEmail"></span> · <button type="button" id="btnSair">Sair</button></div>
     <div class="tabs noprint">
-      <button type="button" data-tab="tNovo" class="on">Enviar ao cliente</button>
+      <button type="button" data-tab="tNovo" class="on">+ Novo checklist</button>
       <button type="button" data-tab="tLista">Checklists <span class="qt" id="qtLista">0</span></button>
     </div>
 
     <!-- Aba: gerar link -->
     <div id="tNovo">
       <div class="card">
-        <h2><span class="num">1</span>Cliente e imóvel</h2>
+        <h2>Novo checklist</h2>
         <div class="secdesc">Identifique o proprietário e o imóvel. O cliente recebe um link só com as opções para marcar, sem nenhum outro campo para preencher.</div>
         <div class="grid">
           <div class="full"><label class="l req">Nome do cliente</label><input id="c_nome" placeholder="Nome do proprietário"></div>
@@ -214,14 +217,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
           </div>
           <div class="nota"><b id="codGerado"></b><br>O checklist fica registrado em "Checklists" como <b>Aguardando cliente</b> e muda para <b>Respondido</b> quando você abrir o link de retorno que chega por e-mail e Telegram.</div>
         </div>
-        <button class="voltar" id="btnEuMesmo">Estou no imóvel: preencher eu mesmo agora</button>
+        <div class="ou">ou</div><button class="btn btn-sec w100" id="btnEuMesmo">Estou no imóvel: preencher eu mesmo agora</button>
       </div>
     </div>
 
     <!-- Aba: lista -->
     <div id="tLista" class="hide">
       <div class="card">
-        <div class="listhead"><h2>Checklists</h2><button type="button" class="btn btn-sec" id="btnAtualizar">Atualizar</button></div>
+        <div class="listhead"><h2>Checklists</h2><div class="lh-btns"><button type="button" class="btn btn-sec" id="btnAtualizar">Atualizar</button><button type="button" class="btn btn-ouro" id="btnNovo">+ Novo checklist</button></div></div>
         <div class="secdesc">Respostas recebidas e links enviados que ainda aguardam o cliente. Toque em um item para abrir.</div>
         <div class="lista" id="lista"></div>
         <div class="nota">Lista guardada no banco da Mude Imóveis: aparece igual no computador e no celular.</div>
@@ -237,7 +240,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
         <button class="btn btn-wa" id="aWa">Enviar ao WhatsApp do cliente (PDF)</button>
         <button class="btn btn-perigo" id="aEliminar">Eliminar</button>
       </div>
-      <button class="voltar noprint" id="resVoltar">&#8592; Voltar para a lista</button>
+      <div class="resnav noprint"><button class="voltar" id="resVoltar">&#8592; Voltar para a lista</button><button class="voltar" id="resNovo">+ Novo checklist</button></div>
     </div>
 
     <!-- Edição interna -->
@@ -534,6 +537,8 @@ function iniciarInterno(){
   document.querySelectorAll(".tabs button").forEach(function(b){ b.onclick=function(){ aba(b.getAttribute("data-tab")); }; });
   $("btnSair").onclick=function(){ sb.auth.signOut().then(function(){ location.replace(location.pathname); }); };
   $("btnAtualizar").onclick=function(){ dbListar().then(renderLista); };
+  function novo(){ ["c_nome","c_tel","c_email","i_end","i_cond"].forEach(function(k){ $(k).value=""; }); $("i_tipo").selectedIndex=0; $("gerado").classList.add("hide"); ultimoLink=""; aba("tNovo"); setTimeout(function(){ $("c_nome").focus(); },150); }
+  $("btnNovo").onclick=novo; $("resNovo").onclick=novo;
   $("c_tel").addEventListener("input",function(){ this.value=fmtTel(this.value); });
   $("btnGerar").onclick=gerarLink;
   $("btnCopiar").onclick=function(){ navigator.clipboard.writeText(ultimoLink).then(function(){ $("btnCopiar").textContent="Link copiado ✓"; setTimeout(function(){ $("btnCopiar").textContent="Copiar link"; },1800); },function(){ alert("Copie manualmente o link acima."); }); };
