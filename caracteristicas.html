@@ -45,6 +45,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
 .btn-perigo{background:var(--branco);color:#9b3b3b;border:1px solid #e8cfcf}
 .btn-perigo:hover{border-color:#9b3b3b}
 .btn-wa{background:#1f7a4d;color:#fff}
+.btn-aut{background:var(--branco);color:var(--preto);border:1px solid #b8924f;grid-column:1/-1;font-weight:600}
+.btn-aut:hover{background:#faf6ee}
 .w100{width:100%}
 .acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
 .linkbox{background:var(--cinza);border:1px dashed var(--dourado);border-radius:10px;padding:13px;font-size:12.5px;word-break:break-all;color:var(--suave);margin-top:14px}
@@ -238,6 +240,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--dourado)
         <button class="btn btn-ouro" id="aEditar">Editar</button>
         <button class="btn btn-sec" id="aImprimir">Imprimir</button>
         <button class="btn btn-wa" id="aWa">Enviar ao WhatsApp do cliente (PDF)</button>
+        <button class="btn btn-aut" id="aAut">Gerar autorização de venda (aceite com IP)</button>
         <button class="btn btn-perigo" id="aEliminar">Eliminar</button>
       </div>
       <div class="resnav noprint"><button class="voltar" id="resVoltar">&#8592; Voltar para a lista</button><button class="voltar" id="resNovo">+ Novo checklist</button></div>
@@ -550,6 +553,7 @@ function iniciarInterno(){
   $("aEditar").onclick=function(){ abrirEdicao(ATUAL.id); };
   $("aImprimir").onclick=function(){ window.print(); };
   $("aWa").onclick=enviarPDFWhats;
+  $("aAut").onclick=gerarAutorizacao;
   $("aEliminar").onclick=function(){
     if(!confirm("Eliminar definitivamente o checklist de "+(ATUAL.cli.nome||"")+"? Esta ação não pode ser desfeita.")) return;
     var fim=ocupado($("aEliminar"),"Eliminando…");
@@ -695,18 +699,37 @@ function enviarPDFWhats(){
   var doc=gerarPDF(r); if(!doc){ alert("O gerador de PDF não carregou. Verifique a conexão e recarregue a página."); return; }
   var nome=nomeArq(r), blob=doc.output("blob"), file=null;
   try{ file=new File([blob],nome,{type:"application/pdf"}); }catch(e){}
-  /* Celular e Mac/Safari: abre o compartilhamento com o PDF anexado (escolha WhatsApp) */
-  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+  /* Só no celular/tablet: abre o compartilhamento com o PDF anexado (escolha WhatsApp).
+     No computador (Mac/Windows) a janela de compartilhamento do sistema não lista o WhatsApp,
+     então baixa o PDF e abre a conversa do cliente direto. */
+  if(ehMovel() && file && navigator.canShare && navigator.canShare({files:[file]})){
     navigator.share({files:[file], title:"Características do imóvel", text:msgPDF(r)}).catch(function(e){ if(e&&e.name!=="AbortError") fallbackWa(r,doc,nome); });
     return;
   }
   fallbackWa(r,doc,nome);
 }
+function ehMovel(){ var ua=navigator.userAgent||""; return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1); }
 function fallbackWa(r,doc,nome){
   doc.save(nome);
   var n=telWa(r.cli.tel);
   alert("O PDF \""+nome+"\" foi baixado.\n\nO WhatsApp vai abrir na conversa do cliente com a mensagem pronta: é só anexar o PDF (clipe ou arrastar o arquivo) e enviar.");
   window.open((n?("https://wa.me/"+n+"?text="):"https://wa.me/?text=")+encodeURIComponent(msgPDF(r)),"_blank");
+}
+
+/* ---------- Checklist -> Autorização de venda (aceite por link com IP) ---------- */
+var AUT_PAGINA="index.html"; /* formulário interno de autorização, na mesma pasta */
+function gerarAutorizacao(){
+  var r=ATUAL; if(!r) return;
+  var i=r.imo||{}, carac=MCK_GRUPOS.filter(function(g){ return r.sel&&r.sel[g.id]&&r.sel[g.id].length; })
+    .map(function(g){ return [g.t, g.itens.filter(function(x){ return r.sel[g.id].indexOf(x)>=0; }).concat(r.sel[g.id].filter(function(x){ return g.itens.indexOf(x)<0; })).join(", ")]; });
+  var pre={ v:1, ck:r.codigo||r.id, ckId:r.id,
+    prop:{ nome:r.cli.nome||"", tel:r.cli.tel||"", email:r.cli.email||"" },
+    imo:{ tipo:i.tipo||"", end:i.end||"", cond:i.cond||"" },
+    corr:r.corr||"", carac:carac, obs:r.obs||"" };
+  var w=window.open(AUT_PAGINA+"#pre="+pack(pre),"_blank");
+  if(!w){ location.href=AUT_PAGINA+"#pre="+pack(pre); return; }
+  /* registra no histórico do checklist (não bloqueia nada se falhar) */
+  try{ var u=JSON.parse(JSON.stringify(r)); hist(u,"Autorização de venda iniciada a partir deste checklist"); dbAtualizar(u).then(function(o){ if(o) cacheAtualizar(o); }).catch(function(){}); }catch(e){}
 }
 
 /* ---------- inicialização ---------- */

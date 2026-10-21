@@ -78,6 +78,10 @@ textarea{min-height:80px;resize:vertical}
     <div style="margin-top:12px"><a href="caracteristicas.html" style="font-size:13px;color:var(--preto);text-decoration:none;border-bottom:1px solid var(--dourado);padding-bottom:1px">Checklist “O que seu imóvel tem?” &rarr;</a></div>
   </header>
 
+  <div class="card hide" id="preAviso" style="border:1px solid #b8924f;background:#faf6ee">
+    <div style="font-size:14px;line-height:1.55"><b>Dados importados do checklist <span id="preCod"></span>.</b> Proprietário, imóvel, corretor e as <span id="preQt"></span> características marcadas já vieram preenchidos e vão aparecer na autorização que o cliente aceita. Complete o que falta (CPF/CNPJ, bairro, valor de venda) e gere o link.</div>
+  </div>
+
   <div class="card">
     <h2><span class="num">1</span>Proprietário (Outorgante)</h2>
     <div class="secdesc">Dados de quem autoriza a venda. Estes dados aparecem na autorização que o cliente vai conferir e aceitar.</div>
@@ -263,6 +267,39 @@ $("imoveisWrap").addEventListener("focusout", function(e){ if(e.target.classList
 $("imoveisWrap").addEventListener("click", function(e){ var b=e.target.closest(".imv-remove"); if(b){ var bl=b.closest(".imovel-block"); if(bl){ bl.remove(); renumerarImoveis(); } } });
 addImovel(); /* começa com um imóvel */
 
+/* ---- Pré-preenchimento vindo do checklist "O que seu imóvel tem?" (caracteristicas.html) ---- */
+var PRE = null;
+var TIPO_DO_CHECKLIST = { "Casa":"Casa", "Apartamento":"Apartamento", "Casa em condomínio":"Casa", "Terreno / Lote":"Terreno",
+  "Imóvel comercial":"Imóvel comercial", "Sala comercial":"Sala comercial", "Chácara / Sítio":"Chácara", "Fazenda":"Fazenda" };
+function aplicarPre(){
+  var m = (location.hash || "").match(/[#&]pre=([^&]+)/); if(!m) return;
+  try{ PRE = JSON.parse(LZString.decompressFromEncodedURIComponent(m[1])); }catch(e){ PRE = null; }
+  if(!PRE || !PRE.prop) { PRE = null; return; }
+  var p = PRE.prop, im = PRE.imo || {};
+  if(p.nome) $("p_nome").value = p.nome;
+  if(p.email) $("p_email").value = p.email;
+  if(p.tel){ $("p_tel").value = p.tel; maskTel(); }
+  var b = $("imoveisWrap").querySelector(".imovel-block");
+  if(b){
+    var t = TIPO_DO_CHECKLIST[im.tipo] || ""; if(t) b.querySelector(".im-tipo").value = t;
+    /* "Rua X, 1455, Bairro, Cidade" -> logradouro / número / bairro / cidade */
+    var partes = String(im.end || "").split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+    if(partes.length){
+      b.querySelector(".im-log").value = partes.shift();
+      if(partes.length && /^\d+[A-Za-z]?$|^s\/?n$/i.test(partes[0])) b.querySelector(".im-num").value = partes.shift();
+      if(partes.length && !/dourados|\/ms$|-\s*ms$/i.test(partes[0])) b.querySelector(".im-bairro").value = partes.shift();
+      if(partes.length) b.querySelector(".im-cidade").value = partes.join(", ").replace(/\s*-\s*MS$/i, "/MS");
+    }
+    if(im.cond) b.querySelector(".im-comp").value = im.cond;
+  }
+  if(PRE.corr){ var sel = $("c_corr"); for(var k=0;k<sel.options.length;k++){ if(sel.options[k].text === PRE.corr){ sel.selectedIndex = k; break; } } }
+  if(PRE.obs) $("c_obs").value = PRE.obs;
+  var qt = 0; (PRE.carac || []).forEach(function(c){ qt += String(c[1] || "").split(",").filter(function(x){ return x.trim(); }).length; });
+  $("preCod").textContent = PRE.ck || ""; $("preQt").textContent = qt;
+  $("preAviso").classList.remove("hide");
+}
+aplicarPre();
+
 
 function coletar(){
   var faltando = [];
@@ -342,6 +379,7 @@ function secoesDeDados(d){
     });
     s.push({ t: "Outros imóveis do mesmo proprietário", rows: rows.map(function(r){ return r[0].indexOf("Imóvel adicional") === 0 ? [r[0], "—"] : r; }), paras: paras });
   }
+  if(d.carac && d.carac.length) s.push({ t: "4. Características do imóvel", rows: d.carac.map(function(c){ return [c[0], c[1]]; }).concat(d.ck ? [["Checklist de origem", d.ck]] : []), paras: [] });
   s.push({ t: "5. Observações do imóvel", rows: [], paras: d.obs ? [d.obs] : [] });
   s.push({ t: "6. Condições comerciais", rows: [["Valor pretendido", rs(i0.valor)], ["Comissão", (c.comissao || "5") + "%"]], paras: [] });
   s.push({ t: "7. Autorizações e divulgação", rows: [["Modalidade", c.excl === "sim" ? "Com exclusividade" : "Sem exclusividade"], ["Prazo de autorização", c.prazo || ""]], paras: [] });
@@ -377,6 +415,7 @@ function gerar(){
   }
   if(!AUT_ID) AUT_ID = novoIdAut();
   r.dados.id = AUT_ID;
+  if(PRE && PRE.carac && PRE.carac.length){ r.dados.carac = PRE.carac; r.dados.ck = PRE.ck || ""; }
   var json = JSON.stringify(r.dados);
   var payload = LZString.compressToEncodedURIComponent(json);
   ultimoLink = ACEITE_URL + "#a=" + payload;
@@ -439,6 +478,7 @@ $("btnNovo").addEventListener("click", function(){
   $("resultado").classList.add("hide");
   ultimoLink = "";
   AUT_ID = null; $("statusDb").textContent = "";
+  PRE = null; $("preAviso").classList.add("hide"); if(/#pre=/.test(location.hash)) history.replaceState(null, "", location.pathname);
   window.scrollTo({top:0, behavior:"smooth"});
 });
 </script>
