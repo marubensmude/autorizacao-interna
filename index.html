@@ -57,7 +57,26 @@ textarea{min-height:80px;resize:vertical}
 .hide{display:none!important}
 .foot{text-align:center;font-size:11.5px;color:var(--suave);margin-top:34px;letter-spacing:.5px}
 .foot b{font-family:'Cormorant Garamond',serif;color:var(--preto);font-size:14px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.acoes{grid-template-columns:1fr}}
+.modo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 16px}
+.modo button{font-family:'Jost',sans-serif;font-size:14px;padding:12px 10px;border-radius:10px;border:1px solid var(--cinza-borda);background:var(--branco);color:var(--texto);cursor:pointer;line-height:1.3}
+.modo button small{display:block;font-size:11.5px;color:var(--suave);margin-top:2px}
+.modo button.on{background:var(--preto);color:var(--dourado-claro);border-color:var(--preto)}
+.modo button.on small{color:#cfc6b6}
+.subtit{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--preto);margin:22px 0 10px;padding-top:14px;border-top:1px solid var(--cinza-borda)}
+.uni-wrap{overflow-x:auto;border:1px solid var(--cinza-borda);border-radius:10px;margin-top:8px;-webkit-overflow-scrolling:touch}
+table.uni{border-collapse:collapse;width:100%;min-width:680px;font-size:13px}
+table.uni th{background:var(--preto);color:var(--dourado-claro);font-weight:500;text-align:left;padding:8px 6px;font-size:11.5px;letter-spacing:.3px;white-space:nowrap}
+table.uni th.n{width:34px;text-align:center}
+table.uni td{padding:4px;border-top:1px solid var(--cinza-borda);vertical-align:middle}
+table.uni td.n{text-align:center;color:var(--suave);font-size:12px}
+table.uni input{padding:7px 8px;font-size:13px;border-radius:6px;min-width:70px}
+table.uni input.u-money{min-width:130px}
+table.uni .rm{background:none;border:none;color:#a93a2e;font-size:19px;cursor:pointer;padding:0 6px;line-height:1}
+.uni-tot{font-size:13px;color:var(--suave);margin-top:8px}
+.uni-tot b{color:var(--preto)}
+.uni-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.uni-acoes .btn{padding:9px 14px;font-size:13px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.acoes{grid-template-columns:1fr}.modo{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -89,8 +108,8 @@ textarea{min-height:80px;resize:vertical}
   </div>
 
   <div class="card">
-    <h2><span class="num">1</span>Proprietário (Outorgante)</h2>
-    <div class="secdesc">Dados de quem autoriza a venda. Estes dados aparecem na autorização que o cliente vai conferir e aceitar.</div>
+    <h2><span class="num">1</span><span id="t_prop">Proprietário (Outorgante)</span></h2>
+    <div class="secdesc" id="d_prop">Dados de quem autoriza a venda. Estes dados aparecem na autorização que o cliente vai conferir e aceitar.</div>
     <div class="grid">
       <div class="full"><label class="req">Nome completo / Razão social</label><input id="p_nome" placeholder="Nome do proprietário"></div>
       <div><label>Tipo de pessoa</label><select id="p_tp"><option value="PF">Pessoa Física (CPF)</option><option value="PJ">Pessoa Jurídica (CNPJ)</option></select></div>
@@ -98,20 +117,91 @@ textarea{min-height:80px;resize:vertical}
       <div><label class="req">E-mail</label><input id="p_email" type="email" placeholder="email@exemplo.com"></div>
       <div><label class="req">Telefone / WhatsApp</label><input id="p_tel" inputmode="numeric" placeholder="(67)99999-9999"></div>
     </div>
+    <div id="repWrap" class="hide">
+      <div class="subtit">Representante legal</div>
+      <div class="grid">
+        <div><label class="req" id="r_nome_lb">Nome do representante</label><input id="r_nome" placeholder="Quem assina pela empresa"></div>
+        <div><label class="req" id="r_cpf_lb">CPF do representante</label><input id="r_cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
+        <div class="full"><label>Qualidade / cargo</label><input id="r_cargo" placeholder="Ex.: sócio-administrador, diretor, procurador"></div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
-    <h2><span class="num">2</span>Imóveis</h2>
+    <h2><span class="num">2</span><span id="t_imo">Imóveis</span></h2>
+    <div class="modo" id="modoSel">
+      <button type="button" data-modo="ind" class="on">Imóvel(is) avulso(s)<small>Casa, apartamento, terreno, rural...</small></button>
+      <button type="button" data-modo="emp">Empreendimento<small>Construtora / incorporadora · várias unidades</small></button>
+    </div>
+    <div id="modoInd">
     <div class="secdesc">Dados mínimos para identificar e precificar cada imóvel autorizado. Para o mesmo proprietário, você pode adicionar quantos imóveis quiser; será gerada uma única autorização com um só aceite.</div>
     <div id="imoveisWrap"></div>
     <button type="button" class="btn btn-sec" id="btnAddImovel" style="margin-top:4px">+ Adicionar outro imóvel</button>
+    </div>
+    <div id="modoEmp" class="hide">
+      <div class="secdesc">Para construtoras e incorporadoras: identifique o empreendimento e relacione as unidades autorizadas. As colunas das unidades mudam conforme o tipo escolhido.</div>
+      <div class="grid">
+        <div class="full"><label class="req">Nome do empreendimento</label><input id="e_nome" placeholder="Ex.: Residencial Jardim das Palmeiras"></div>
+        <div><label class="req">Tipo de empreendimento</label><select id="e_tipo"></select></div>
+        <div><label>Situação</label><select id="e_sit"><option value="">Selecione</option><option>Lançamento</option><option>Em construção / obras de infraestrutura</option><option>Concluído / pronto</option></select></div>
+        <div><label>Previsão de entrega</label><input id="e_entrega" placeholder="Ex.: dez/2027"></div>
+        <div><label>Total de unidades do empreendimento</label><input id="e_total" inputmode="numeric" placeholder="Ex.: 240"></div>
+        <div><label>Área total do empreendimento</label><input id="e_areatot" placeholder="Ex.: 12,5 ha ou 4.800 m²"></div>
+        <div><label>Matrícula-mãe</label><input id="e_mat" placeholder="Nº da matrícula"></div>
+        <div><label>Cartório de Registro de Imóveis</label><input id="e_cri" placeholder="Ex.: Cartório do 1º Ofício de Dourados"></div>
+        <div><label id="e_reg_lb">Registro da incorporação</label><input id="e_reg" placeholder="Ex.: R-5 da matrícula"></div>
+        <div><label>Alvará / aprovação municipal</label><input id="e_alv" placeholder="Nº e data"></div>
+        <div class="full"><label>CEP</label><input id="e_cep" inputmode="numeric" maxlength="9" placeholder="00000-000"><div id="e_cepstatus" style="font-size:12px;color:var(--suave);margin-top:6px">Digite o CEP para preencher o endereço automaticamente.</div></div>
+        <div><label class="req" id="e_log_lb">Logradouro</label><input id="e_log" placeholder="Rua / Av. / Rodovia"></div>
+        <div><label>Número</label><input id="e_num" placeholder="Nº ou km"></div>
+        <div><label>Complemento</label><input id="e_comp" placeholder="Opcional"></div>
+        <div><label class="req" id="e_bairro_lb">Bairro / Região</label><input id="e_bairro" placeholder="Bairro ou região"></div>
+        <div><label>Cidade / UF</label><input id="e_cidade" value="Dourados/MS"></div>
+        <div class="full e-rural hide"><label>Acesso / como chegar</label><input id="e_acesso" placeholder="Ex.: MS-156, km 12, entrada à direita após a ponte"></div>
+        <div class="full e-rural hide"><label>Link de localização (Google Maps)</label><input id="e_maps" placeholder="https://maps.app.goo.gl/..."></div>
+        <div class="full"><label>Lazer e diferenciais do empreendimento</label><textarea id="e_lazer" placeholder="Portaria 24h, área de lazer, piscina, quadra de beach tennis, infraestrutura completa..."></textarea></div>
+      </div>
+
+      <div class="subtit">Unidades autorizadas</div>
+      <div class="grid">
+        <div><label>Abrangência</label><select id="e_abr"><option value="listadas">Somente as unidades relacionadas abaixo</option><option value="todas">Todas as unidades disponíveis</option></select></div>
+        <div><label>Preços</label><select id="e_preco"><option value="unidade">Valor informado por unidade</option><option value="tabela">Conforme tabela de vendas vigente</option></select></div>
+        <div class="full e-tab hide"><label>Tabela de vendas de referência</label><input id="e_tab" placeholder="Ex.: Tabela de nov/2026, versão 03"></div>
+      </div>
+      <div id="uniAviso" class="secdesc" style="margin-top:12px">Escolha o tipo de empreendimento para abrir a tabela de unidades.</div>
+      <div id="uniBox" class="hide">
+        <div class="uni-wrap"><table class="uni" id="uniTab"></table></div>
+        <div class="uni-tot" id="uniTot"></div>
+        <div class="uni-acoes">
+          <button type="button" class="btn btn-sec" id="btnAddUni">+ Adicionar unidade</button>
+          <button type="button" class="btn btn-sec" id="btnAdd10">+ 10 linhas</button>
+          <button type="button" class="btn btn-sec" id="btnColar">Colar da planilha</button>
+          <button type="button" class="btn btn-sec" id="btnLimparUni">Limpar unidades</button>
+        </div>
+        <div id="colarBox" class="hide" style="margin-top:12px">
+          <label>Copie as linhas no Excel ou Google Planilhas e cole aqui, nesta ordem de colunas: <b id="colarOrdem"></b>. Uma unidade por linha; a linha de cabeçalho, se vier, é ignorada.</label>
+          <textarea id="colarTxt" style="min-height:120px;font-size:13px" placeholder="Cole aqui..."></textarea>
+          <div class="uni-acoes">
+            <button type="button" class="btn btn-sec" id="btnColarOk">Importar linhas</button>
+            <button type="button" class="btn btn-sec" id="btnColarCancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="subtit">Condições de pagamento</div>
+      <div class="grid">
+        <div><label>Índice de correção</label><select id="e_ind"><option value="">Selecione</option><option>INCC</option><option>IPCA</option><option>IGP-M</option><option>CUB</option><option>Sem correção</option><option>Outro (detalhar abaixo)</option></select></div>
+        <div><label>Financiamento bancário</label><select id="e_fin"><option value="">Selecione</option><option>Aceita</option><option>Aceita após a conclusão / entrega</option><option>Não aceita</option></select></div>
+        <div class="full"><label>Condições (entrada, parcelas, balões, permuta)</label><textarea id="e_pgto" placeholder="Ex.: entrada de 10%, saldo em até 60 parcelas mensais, balões anuais, correção pelo INCC até a entrega"></textarea></div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
     <h2><span class="num">3</span>Condições comerciais</h2>
-    <div class="secdesc">Parâmetros da intermediação. Padrão Mude já preenchido; ajuste se necessário.</div>
+    <div class="secdesc" id="d_com">Parâmetros da intermediação. Padrão Mude já preenchido; ajuste se necessário.</div>
     <div class="grid">
-      <div><label>Comissão (%)</label><input id="c_com" value="5"></div>
+      <div><label id="c_com_lb">Comissão (%)</label><input id="c_com" value="5"></div>
       <div><label>Exclusividade</label><select id="c_excl"><option value="sim">Com exclusividade</option><option value="nao">Sem exclusividade</option></select></div>
       <div><label>Prazo da autorização</label>
         <select id="c_prazo">
@@ -138,6 +228,7 @@ textarea{min-height:80px;resize:vertical}
     <div id="resultado" class="hide">
       <div class="linkbox" id="linkOut"></div>
       <div id="statusDb" style="font-size:12.5px;color:var(--suave);margin-top:8px"></div>
+      <div id="linkLongo" class="hide" style="font-size:13px;line-height:1.5;background:#fff4e0;color:#7a5412;border-radius:9px;padding:10px 13px;margin-top:10px"></div>
       <div class="acoes">
         <button class="btn btn-sec" id="btnCopiar">Copiar link</button>
         <button class="btn btn-sec" id="btnWa">Enviar no WhatsApp</button>
@@ -354,7 +445,10 @@ function aplicarEdicao(){
   var p = d.prop, c = d.com || {};
   $("p_nome").value = p.nome || ""; $("p_tp").value = p.tp === "PJ" ? "PJ" : "PF";
   $("p_doc").value = p.doc || ""; $("p_email").value = p.email || ""; $("p_tel").value = p.tel || ""; maskTel();
-  var ims = (d.imoveis && d.imoveis.length) ? d.imoveis : (d.imo ? [d.imo] : []);
+  if(p.rep){ $("r_nome").value = p.rep.nome || ""; $("r_cpf").value = p.rep.cpf || ""; $("r_cargo").value = p.rep.cargo || ""; }
+  atualizaRep();
+  var ims = d.emp ? [] : ((d.imoveis && d.imoveis.length) ? d.imoveis : (d.imo ? [d.imo] : []));
+  if(d.emp) preencherEmp(d.emp, p);
   $("imoveisWrap").innerHTML = ""; if(!ims.length) addImovel();
   ims.forEach(function(im){
     addImovel(); var bs = $("imoveisWrap").querySelectorAll(".imovel-block"), b = bs[bs.length-1];
@@ -387,13 +481,255 @@ $("app").addEventListener("input", function(e){ if(e.target.id !== "senha") marc
 $("app").addEventListener("change", function(e){ if(e.target.id !== "senha") marcarDesatualizado(); });
 
 
+/* ===== EMPREENDIMENTO (bloco idêntico em index.html e aceite.html) ===== */
+var EMP_TIPOS = {
+  "Apartamentos": { desc: "Apartamentos (edifício / condomínio vertical)", lei: "4591", rotUn: "unidades autônomas",
+    cols: [["torre","Torre / Bloco"],["un","Unidade","id"],["andar","Andar"],["tipol","Tipologia"],["area","Área privativa (m²)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
+  "Casas": { desc: "Casas (condomínio horizontal / residencial)", lei: "4591", rotUn: "unidades autônomas",
+    cols: [["qd","Quadra / Rua"],["un","Casa nº","id"],["aterr","Terreno (m²)"],["acons","Construída (m²)"],["tipol","Quartos / Suítes"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
+  "Lotes": { desc: "Lotes (loteamento / condomínio de lotes)", lei: "6766", rotUn: "lotes",
+    cols: [["qd","Quadra","id"],["lt","Lote","id"],["area","Área (m²)"],["frente","Frente (m)"],["fundo","Fundo (m)"],["pos","Posição"],["valor","Valor (R$)","$"]] },
+  "Chácaras": { desc: "Chácaras (condomínio / loteamento de chácaras)", lei: "6766", rural: true, rotUn: "chácaras",
+    cols: [["qd","Quadra / Gleba"],["un","Chácara nº","id"],["area","Área (m² ou ha)"],["frente","Frente (m)"],["benf","Benfeitorias"],["valor","Valor (R$)","$"]] },
+  "Pesqueiro": { desc: "Pesqueiro / ranchos (unidades à beira d'água)", lei: "", rural: true, rotUn: "unidades",
+    cols: [["qd","Setor / Quadra"],["un","Rancho / Unidade","id"],["area","Área (m²)"],["agua","Frente p/ água (m)"],["benf","Benfeitorias"],["valor","Valor (R$)","$"]] },
+  "Salas": { desc: "Salas comerciais / lojas", lei: "4591", rotUn: "unidades autônomas",
+    cols: [["torre","Bloco / Torre"],["un","Sala / Loja","id"],["andar","Andar"],["area","Área privativa (m²)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] }
+};
+function empStr(v){ return String(v == null ? "" : v).trim(); }
+function empReais(v){ var s = empStr(v).replace(/[Rr]\$/, "").trim(); if(s.indexOf(",") >= 0) s = s.split(",")[0]; var n = s.replace(/[^\d]/g, ""); return n ? Number(n) : 0; }
+function empMoeda(n){ return n ? "R$ " + Number(n).toLocaleString("pt-BR") : ""; }
+function empDesc(e){ var t = EMP_TIPOS[e.tipo]; return t ? t.desc : (e.tipo || ""); }
+function empEndereco(e){
+  return [e.log ? (e.log + (e.num ? ", " + e.num : "") + (e.comp ? ", " + e.comp : "")) : "", e.bairro, e.cidade, e.cep ? "CEP " + e.cep : ""].filter(Boolean).join(" · ");
+}
+function empRegRot(e){ var t = EMP_TIPOS[e.tipo]; return (t && t.lei === "6766") ? "Registro do loteamento" : "Registro da incorporação"; }
+function empUnidades(e){ return (e && e.uni) ? e.uni : []; }
+/* Rótulo curto da unidade a partir das colunas de identificação (ex.: "Quadra 3 · Lote 12") */
+function empRotUnidade(e, r){
+  var p = []; (e.cab || []).forEach(function(c, i){ if(e.ids && e.ids.indexOf(i) >= 0 && empStr(r[i])) p.push(c + " " + empStr(r[i])); });
+  return p.join(" · ") || "Unidade";
+}
+/* Demais colunas da unidade em texto corrido (para Gerenciador e WhatsApp) */
+function empDescUnidade(e, r){
+  var p = []; (e.cab || []).forEach(function(c, i){
+    if(e.ids && e.ids.indexOf(i) >= 0) return; var v = empStr(r[i]); if(!v) return;
+    p.push(i === e.vi ? empMoeda(empReais(v)) : (c.replace(/\s*\(R\$\)/, "") + ": " + v));
+  });
+  return p.join(" · ");
+}
+function empVGV(e){ var s = 0; if(e.vi == null || e.vi < 0) return 0; empUnidades(e).forEach(function(r){ s += empReais(r[e.vi]); }); return s; }
+function empResumoRows(e){
+  return [["Empreendimento", e.nome], ["Tipo", empDesc(e)], ["Situação", e.sit], ["Previsão de entrega", e.entrega],
+    ["Endereço", empEndereco(e)], ["Acesso / como chegar", e.acesso], ["Localização no mapa", e.maps],
+    ["Total de unidades do empreendimento", e.total], ["Área total", e.areatot],
+    ["Matrícula-mãe", e.mat ? (e.mat + (e.cri ? " · " + e.cri : "")) : e.cri], [empRegRot(e), e.reg], ["Alvará / aprovação municipal", e.alv],
+    ["Lazer e diferenciais", e.lazer]].filter(function(x){ return empStr(x[1]); });
+}
+function empCondRows(e){
+  var n = empUnidades(e).length, vgv = empVGV(e);
+  return [["Abrangência", e.abr === "todas" ? "Todas as unidades disponíveis do empreendimento" : "Somente as unidades relacionadas neste instrumento"],
+    ["Unidades relacionadas", n ? String(n) : ""],
+    ["Preços", e.preco === "tabela" ? "Conforme tabela de vendas vigente da incorporadora" : "Valor informado por unidade"],
+    ["Tabela de referência", e.preco === "tabela" ? e.tab : ""],
+    ["Soma dos valores das unidades (VGV)", vgv ? empMoeda(vgv) : ""],
+    ["Índice de correção", e.ind], ["Financiamento bancário", e.fin], ["Condições de pagamento", e.pgto]].filter(function(x){ return empStr(x[1]); });
+}
+function empRepTxt(p){
+  var r = p && p.rep; if(!r || !empStr(r.nome)) return "";
+  return "neste ato representada por <b>" + empEsc(r.nome) + "</b>" + (r.cpf ? ", CPF " + empEsc(r.cpf) : "") + (r.cargo ? ", na qualidade de " + empEsc(r.cargo) : "") + ", ";
+}
+function empEsc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function empTermoHTML(d){
+  var e = d.emp, c = d.com || {}, t = EMP_TIPOS[e.tipo] || {}, rot = t.rotUn || "unidades", n = empUnidades(e).length;
+  var alvo = e.abr === "todas"
+    ? "das " + rot + " disponíveis do empreendimento <b>" + empEsc(e.nome) + "</b>"
+    : "das " + rot + " do empreendimento <b>" + empEsc(e.nome) + "</b> relacionadas neste instrumento" + (n ? " (" + n + (n === 1 ? " unidade" : " unidades") + ")" : "");
+  var precos = e.preco === "tabela"
+    ? "observados os preços da tabela de vendas vigente fornecida pela OUTORGANTE" + (e.tab ? " (" + empEsc(e.tab) + ")" : "")
+    : "observados os valores de venda informados para cada unidade";
+  var excl = c.excl === "sim" ? "com exclusividade" : "sem exclusividade";
+  var prazo = /venda/i.test(c.prazo || "") ? "até a efetivação da venda das unidades" : empEsc(c.prazo || "");
+  var txt = "A OUTORGANTE acima qualificada, na condição de incorporadora e/ou proprietária do empreendimento, " + empRepTxt(d.prop)
+    + "autoriza a <b>MRM Negócios e Consultorias Imobiliárias Ltda. (Mude Imóveis)</b>, inscrita no CRECI/MS sob o nº 6052-J, "
+    + "na condição de OUTORGADA, a promover e intermediar a venda " + alvo + ", " + excl + ", pelo prazo de " + prazo + ", "
+    + "mediante comissão de " + empEsc((c.comissao || "5") + "%") + " sobre o valor efetivo de venda de cada unidade comercializada, "
+    + precos + " e as condições de pagamento por ela estabelecidas, ficando a OUTORGADA autorizada a anunciar, divulgar e apresentar as unidades a interessados, "
+    + "utilizar o material de divulgação do empreendimento, agendar e realizar visitas e adotar as providências comerciais cabíveis à concretização dos negócios. "
+    + "A OUTORGANTE comunicará à OUTORGADA as unidades que deixarem de estar disponíveis, para atualização da oferta.";
+  var lei = t.lei === "6766" ? "a Lei nº 6.766/1979 (parcelamento do solo urbano), no que couber, "
+          : (t.lei === "4591" ? "a Lei nº 4.591/1964 (incorporações imobiliárias), no que couber, " : "");
+  var legal = "Esta autorização observa a Lei nº 6.530/1978 e o Decreto nº 81.871/1978 (exercício da profissão de corretor de imóveis), "
+    + "a Resolução COFECI nº 1.404/2018, os artigos 722 a 729 do Código Civil (contrato de corretagem), " + lei
+    + "e a Lei nº 13.709/2018 (LGPD). O aceite eletrônico e o respectivo registro de acesso têm fundamento no "
+    + "art. 10 da Lei nº 12.965/2014 (Marco Civil da Internet) e no art. 441 do Código de Processo Civil.";
+  return '<div class="para">' + txt + '</div><div class="legal">' + legal + '</div>';
+}
+/* Seções para o Gerenciador de Autorizações */
+function empSecoes(d){
+  var CRECI_COR = { "Mário Rubens": "CRECI/MS 5710" };
+  var e = d.emp, p = d.prop || {}, c = d.com || {}, s = [], r = p.rep || {};
+  var prow = [["Nome", p.nome || ""], ["Tipo", p.tp === "PJ" ? "Pessoa Jurídica" : "Pessoa Física"], ["CPF/CNPJ", p.doc || ""], ["E-mail", p.email || ""], ["WhatsApp", p.tel || ""]];
+  if(r.nome) prow.push(["Representante legal", r.nome + (r.cpf ? " · CPF " + r.cpf : "") + (r.cargo ? " · " + r.cargo : "")]);
+  s.push({ t: "1. Incorporadora / Proprietária (Outorgante)", rows: prow, paras: [] });
+  s.push({ t: "2. Intermediária (Outorgada)", rows: [["Empresa", "MRM Negócios e Consultorias Imobiliárias Ltda. — Mude Imóveis"], ["CRECI/MS", "6052-J"], ["Sede", "Dourados — MS"], ["Corretor responsável", d.corr ? (d.corr + (CRECI_COR[d.corr] ? " (" + CRECI_COR[d.corr] + ")" : "")) : ""]], paras: [] });
+  s.push({ t: "3. Empreendimento objeto da autorização", rows: empResumoRows(e), paras: [] });
+  var us = empUnidades(e);
+  if(us.length) s.push({ t: "4. Unidades autorizadas (" + us.length + ")", rows: us.map(function(u){ return [empRotUnidade(e, u), empDescUnidade(e, u)]; }), paras: [] });
+  s.push({ t: "5. Observações", rows: [], paras: d.obs ? [d.obs] : [] });
+  s.push({ t: "6. Condições comerciais", rows: [["Comissão", (c.comissao || "5") + "% sobre cada unidade vendida"]].concat(empCondRows(e)), paras: [] });
+  s.push({ t: "7. Autorizações e divulgação", rows: [["Modalidade", c.excl === "sim" ? "Com exclusividade" : "Sem exclusividade"], ["Prazo de autorização", c.prazo || ""]], paras: [] });
+  return s;
+}
+/* ===== fim do bloco EMPREENDIMENTO ===== */
+
+var MODO = "ind", UNI = [];
+(function montarTiposEmp(){
+  $("e_tipo").innerHTML = '<option value="">Selecione</option>' + Object.keys(EMP_TIPOS).map(function(k){ return '<option value="' + k + '">' + EMP_TIPOS[k].desc + '</option>'; }).join("");
+})();
+function empDef(){ return EMP_TIPOS[val("e_tipo")] || null; }
+function setModo(m){
+  MODO = m === "emp" ? "emp" : "ind";
+  $("modoSel").querySelectorAll("button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-modo") === MODO); });
+  $("modoInd").classList.toggle("hide", MODO === "emp");
+  $("modoEmp").classList.toggle("hide", MODO !== "emp");
+  $("t_imo").textContent = MODO === "emp" ? "Empreendimento e unidades" : "Imóveis";
+  $("t_prop").textContent = MODO === "emp" ? "Incorporadora / Proprietária (Outorgante)" : "Proprietário (Outorgante)";
+  $("d_prop").textContent = MODO === "emp"
+    ? "Dados da construtora, incorporadora ou loteadora que autoriza a venda, e de quem a representa. Aparecem na autorização que será conferida e aceita."
+    : "Dados de quem autoriza a venda. Estes dados aparecem na autorização que o cliente vai conferir e aceitar.";
+  $("c_com_lb").textContent = MODO === "emp" ? "Comissão por unidade vendida (%)" : "Comissão (%)";
+  if(MODO === "emp" && !val("p_doc") && $("p_tp").value !== "PJ"){ $("p_tp").value = "PJ"; $("p_doc").placeholder = "00.000.000/0000-00"; }
+  atualizaRep();
+}
+function atualizaRep(){
+  var mostra = MODO === "emp" || $("p_tp").value === "PJ";
+  $("repWrap").classList.toggle("hide", !mostra);
+  ["r_nome_lb","r_cpf_lb"].forEach(function(id){ $(id).classList.toggle("req", MODO === "emp"); });
+}
+function atualizaTipoEmp(){
+  var d = empDef();
+  document.querySelectorAll("#modoEmp .e-rural").forEach(function(el){ el.classList.toggle("hide", !(d && d.rural)); });
+  $("e_reg_lb").textContent = d ? empRegRot({ tipo: val("e_tipo") }) : "Registro da incorporação";
+  $("e_log_lb").classList.toggle("req", !(d && d.rural)); $("e_bairro_lb").classList.toggle("req", !(d && d.rural));
+  $("uniAviso").classList.toggle("hide", !!d); $("uniBox").classList.toggle("hide", !d);
+  if(d){ $("colarOrdem").textContent = d.cols.map(function(c){ return c[1]; }).join(" | "); if(!UNI.length) UNI.push({}); }
+  renderUni();
+}
+function atualizaPrecoEmp(){ $("modoEmp").querySelector(".e-tab").classList.toggle("hide", val("e_preco") !== "tabela"); renderTot(); }
+function renderUni(){
+  var d = empDef(); if(!d){ $("uniTab").innerHTML = ""; return; }
+  var h = '<thead><tr><th class="n">#</th>' + d.cols.map(function(c){ return '<th>' + c[1] + (c[2] === "id" ? ' *' : '') + '</th>'; }).join("") + '<th></th></tr></thead><tbody>';
+  h += UNI.map(function(u, i){
+    return '<tr data-i="' + i + '"><td class="n">' + (i + 1) + '</td>' + d.cols.map(function(c){
+      return '<td><input class="u-in' + (c[2] === "$" ? ' u-money' : '') + '" data-k="' + c[0] + '" value="' + empEsc(u[c[0]] || "").replace(/"/g, "&quot;") + '"' + (c[2] === "$" ? ' inputmode="numeric" placeholder="R$ 0,00"' : '') + '></td>';
+    }).join("") + '<td><button type="button" class="rm" title="Remover unidade">&times;</button></td></tr>';
+  }).join("");
+  $("uniTab").innerHTML = h + '</tbody>';
+  renderTot();
+}
+function renderTot(){
+  var d = empDef(); if(!d){ $("uniTot").innerHTML = ""; return; }
+  var cheias = UNI.filter(uniTemDado), s = 0;
+  cheias.forEach(function(u){ s += empReais(u.valor); });
+  $("uniTot").innerHTML = '<b>' + cheias.length + '</b> ' + (cheias.length === 1 ? "unidade relacionada" : "unidades relacionadas")
+    + (s ? ' · Soma dos valores (VGV): <b>' + empMoeda(s) + '</b>' : '');
+}
+function uniTemDado(u){ for(var k in u){ if(empStr(u[k])) return true; } return false; }
+function addUni(n){ for(var i = 0; i < (n || 1); i++) UNI.push({}); renderUni(); var ins = $("uniTab").querySelectorAll("tbody tr:last-child input"); if(ins[0] && n === 1) ins[0].focus(); marcarDesatualizado(); }
+function importarColado(){
+  var d = empDef(); if(!d) return;
+  var linhas = String($("colarTxt").value || "").split(/\r?\n/).filter(function(l){ return l.trim(); });
+  var novos = [];
+  linhas.forEach(function(l, li){
+    var cel = l.indexOf("\t") >= 0 ? l.split("\t") : l.split(";");
+    cel = cel.map(function(x){ return x.trim(); });
+    var cab = d.cols.some(function(c, i){ return cel[i] && cel[i].toLowerCase() === c[1].toLowerCase(); }) || (li === 0 && /quadra|unidade|lote|torre|casa|rancho|sala|ch[aá]cara/i.test(cel.join(" ")) && !/\d/.test(cel[cel.length - 1] || ""));
+    if(cab) return;
+    var u = {}; d.cols.forEach(function(c, i){ var v = cel[i] || ""; if(c[2] === "$" && v){ var n = empReais(v); v = n ? ("R$ " + n.toLocaleString("pt-BR") + ",00") : ""; } u[c[0]] = v; });
+    if(uniTemDado(u)) novos.push(u);
+  });
+  if(!novos.length){ alert("Nenhuma linha válida encontrada. Confira se as colunas estão separadas por TAB (copiado da planilha) ou por ponto e vírgula."); return; }
+  UNI = UNI.filter(uniTemDado).concat(novos);
+  $("colarTxt").value = ""; $("colarBox").classList.add("hide");
+  renderUni(); marcarDesatualizado();
+  alert(novos.length + (novos.length === 1 ? " unidade importada." : " unidades importadas."));
+}
+function buscaCepEmp(dg){
+  $("e_cepstatus").textContent = "Buscando endereço…";
+  fetch("https://viacep.com.br/ws/" + dg + "/json/").then(function(r){ return r.json(); }).then(function(j){
+    if(j.erro){ $("e_cepstatus").textContent = "CEP não encontrado. Preencha o endereço manualmente."; return; }
+    if(j.logradouro) $("e_log").value = j.logradouro; if(j.bairro) $("e_bairro").value = j.bairro;
+    if(j.localidade) $("e_cidade").value = j.localidade + (j.uf ? "/" + j.uf : "");
+    $("e_cepstatus").textContent = "Endereço preenchido. Confira e informe o número.";
+  }).catch(function(){ $("e_cepstatus").textContent = "Não foi possível buscar o CEP agora. Preencha manualmente."; });
+}
+$("modoSel").addEventListener("click", function(e){ var b = e.target.closest("button[data-modo]"); if(b){ setModo(b.getAttribute("data-modo")); marcarDesatualizado(); } });
+$("p_tp").addEventListener("change", atualizaRep);
+$("r_cpf").addEventListener("input", function(){ $("r_cpf").value = fmtCPF(soDig($("r_cpf").value)); });
+$("e_tipo").addEventListener("change", atualizaTipoEmp);
+$("e_preco").addEventListener("change", atualizaPrecoEmp);
+$("e_cep").addEventListener("input", function(){ var dg = soDig($("e_cep").value).slice(0, 8); $("e_cep").value = dg.length > 5 ? dg.replace(/(\d{5})(\d{1,3})/, '$1-$2') : dg; if(dg.length === 8) buscaCepEmp(dg); });
+$("uniTab").addEventListener("input", function(e){ var el = e.target; if(!el.classList.contains("u-in")) return; var i = +el.closest("tr").getAttribute("data-i"); if(UNI[i]){ UNI[i][el.getAttribute("data-k")] = el.value; renderTot(); } });
+$("uniTab").addEventListener("focusin", function(e){ if(e.target.classList.contains("u-money")){ var v = e.target.value; if(v.indexOf(",") >= 0) v = v.split(",")[0]; e.target.value = soDig(v); } });
+$("uniTab").addEventListener("focusout", function(e){ var el = e.target; if(el.classList.contains("u-money")){ fmtValorEl(el); var i = +el.closest("tr").getAttribute("data-i"); if(UNI[i]){ UNI[i].valor = el.value; renderTot(); } } });
+$("uniTab").addEventListener("keydown", function(e){ if(e.key === "Enter" && e.target.classList.contains("u-in")){ e.preventDefault(); var tr = e.target.closest("tr"); if(!tr.nextElementSibling) addUni(1); else { var n = tr.nextElementSibling.querySelector("input"); if(n) n.focus(); } } });
+$("uniTab").addEventListener("click", function(e){ var b = e.target.closest(".rm"); if(!b) return; var i = +b.closest("tr").getAttribute("data-i"); UNI.splice(i, 1); if(!UNI.length) UNI.push({}); renderUni(); marcarDesatualizado(); });
+$("btnAddUni").addEventListener("click", function(){ addUni(1); });
+$("btnAdd10").addEventListener("click", function(){ addUni(10); });
+$("btnColar").addEventListener("click", function(){ $("colarBox").classList.toggle("hide"); if(!$("colarBox").classList.contains("hide")) $("colarTxt").focus(); });
+$("btnColarCancel").addEventListener("click", function(){ $("colarBox").classList.add("hide"); });
+$("btnColarOk").addEventListener("click", importarColado);
+$("btnLimparUni").addEventListener("click", function(){ if(!UNI.filter(uniTemDado).length || confirm("Apagar todas as unidades da tabela?")){ UNI = [{}]; renderUni(); marcarDesatualizado(); } });
+
+function coletarEmp(faltando){
+  var t = val("e_tipo"), d = EMP_TIPOS[t];
+  var e = { nome: val("e_nome"), tipo: t, sit: val("e_sit"), entrega: val("e_entrega"), total: val("e_total"), areatot: val("e_areatot"),
+    mat: val("e_mat"), cri: val("e_cri"), reg: val("e_reg"), alv: val("e_alv"),
+    cep: val("e_cep"), log: val("e_log"), num: val("e_num"), comp: val("e_comp"), bairro: val("e_bairro"), cidade: val("e_cidade"),
+    acesso: (d && d.rural) ? val("e_acesso") : "", maps: (d && d.rural) ? val("e_maps") : "", lazer: val("e_lazer"),
+    abr: val("e_abr"), preco: val("e_preco"), tab: val("e_preco") === "tabela" ? val("e_tab") : "",
+    ind: val("e_ind"), fin: val("e_fin"), pgto: val("e_pgto"), cab: [], ids: [], vi: -1, uni: [] };
+  if(!e.nome) faltando.push("Empreendimento: nome");
+  if(!d){ faltando.push("Empreendimento: tipo"); return e; }
+  if(d.rural){ if(!e.log && !e.acesso) faltando.push("Empreendimento: logradouro ou acesso / como chegar"); }
+  else { if(!e.log) faltando.push("Empreendimento: logradouro"); if(!e.bairro) faltando.push("Empreendimento: bairro"); }
+  e.cab = d.cols.map(function(c){ return c[1]; });
+  d.cols.forEach(function(c, i){ if(c[2] === "id") e.ids.push(i); if(c[2] === "$") e.vi = i; });
+  UNI.filter(uniTemDado).forEach(function(u, k){
+    var row = d.cols.map(function(c){ return empStr(u[c[0]]); });
+    while(row.length && !row[row.length - 1]) row.pop();
+    var temId = e.ids.some(function(i){ return row[i]; });
+    if(!temId) faltando.push("Unidade da linha " + (k + 1) + ": informe " + e.ids.map(function(i){ return e.cab[i]; }).join(" / "));
+    if(e.preco === "unidade" && !empReais(row[e.vi])) faltando.push("Unidade " + (temId ? empRotUnidade(e, row) : "da linha " + (k + 1)) + ": valor");
+    e.uni.push(row);
+  });
+  if(e.abr === "listadas" && !e.uni.length) faltando.push("Relacione ao menos uma unidade (ou escolha Abrangência = Todas as unidades disponíveis)");
+  if(e.preco === "tabela" && !e.uni.length && e.abr === "todas") { /* ok: autoriza tudo pela tabela */ }
+  return e;
+}
+function preencherEmp(e, p){
+  setModo("emp");
+  ["nome","sit","entrega","total","areatot","mat","cri","reg","alv","cep","log","num","comp","bairro","cidade","acesso","maps","lazer","abr","preco","tab","ind","fin","pgto"].forEach(function(k){ if($("e_" + k) && e[k] != null && e[k] !== "") $("e_" + k).value = e[k]; });
+  $("e_tipo").value = e.tipo || "";
+  var d = EMP_TIPOS[e.tipo];
+  UNI = (e.uni || []).map(function(r){ var u = {}; if(d) d.cols.forEach(function(c, i){ u[c[0]] = r[i] || ""; }); return u; });
+  atualizaTipoEmp(); atualizaPrecoEmp();
+}
+
 function coletar(){
   var faltando = [];
   function check(id, nome){ if(!val(id)) faltando.push(nome); return val(id); }
   function bval(b, cls){ var el=b.querySelector("."+cls); return el ? (el.value||"").trim() : ""; }
 
-  var imoveis = [];
-  var blocos = $("imoveisWrap").querySelectorAll(".imovel-block");
+  var imoveis = [], emp = null;
+  var blocos = MODO === "emp" ? [] : $("imoveisWrap").querySelectorAll(".imovel-block");
+  if(MODO === "emp"){
+    emp = coletarEmp(faltando);
+    var vgv = empVGV(emp);
+    imoveis.push({ tipo: "Empreendimento · " + (EMP_TIPOS[emp.tipo] ? emp.tipo : "") + (emp.nome ? " — " + emp.nome : ""),
+      valor: vgv ? empMoeda(vgv) + ",00" : "", log: emp.log || emp.acesso, num: emp.num, comp: emp.comp, bairro: emp.bairro, cidade: emp.cidade, cep: emp.cep });
+  }
   for(var bi=0; bi<blocos.length; bi++){
     var b = blocos[bi], rot = "Imóvel " + (bi+1) + ": ";
     var im = {
@@ -413,6 +749,9 @@ function coletar(){
     imoveis.push(im);
   }
   if(!imoveis.length) faltando.push("Adicione ao menos um imóvel");
+  var rep = { nome: val("r_nome"), cpf: val("r_cpf"), cargo: val("r_cargo") };
+  if(MODO === "emp"){ if(!rep.nome) faltando.push("Representante legal: nome"); if(!rep.cpf) faltando.push("Representante legal: CPF"); }
+  if(rep.cpf && !validaCPF(rep.cpf)) faltando.push("CPF do representante inválido");
 
   var dados = {
     v: 2,
@@ -421,10 +760,12 @@ function coletar(){
       tp: val("p_tp"),
       doc: check("p_doc","CPF / CNPJ"),
       email: check("p_email","E-mail"),
-      tel: check("p_tel","Telefone")
+      tel: check("p_tel","Telefone"),
+      rep: (rep.nome || rep.cpf || rep.cargo) && !$("repWrap").classList.contains("hide") ? rep : undefined
     },
     imoveis: imoveis,
     imo: imoveis[0] || {},
+    emp: emp || undefined,
     com: {
       comissao: val("c_com") || "5",
       excl: val("c_excl"),
@@ -452,6 +793,7 @@ function mudeRPC(fn, body, ms){
 }
 /* Converte os dados do link na ficha padrão (mesmos rótulos do formulário do cliente) */
 function secoesDeDados(d){
+  if(d && d.emp) return empSecoes(d);
   var CRECI_COR = { "Mário Rubens": "CRECI/MS 5710" };
   var ims = (d && d.imoveis && d.imoveis.length) ? d.imoveis : ((d && d.imo) ? [d.imo] : []);
   function end(i){ return [i.log ? (i.log + (i.num ? ", " + i.num : "") + (i.comp ? ", " + i.comp : "")) : "", i.bairro, i.cidade].filter(Boolean).join(", "); }
@@ -518,11 +860,22 @@ function gerar(){
   $("resultado").classList.remove("hide");
   $("resultado").scrollIntoView({behavior:"smooth", block:"center"});
   registrarNoGerenciador(r.dados, ultimoLink);
+  var ll = $("linkLongo");
+  if(ultimoLink.length > 6000){
+    ll.innerHTML = "Link longo (" + ultimoLink.length.toLocaleString("pt-BR") + " caracteres) por causa da quantidade de unidades. Ele funciona, mas alguns aplicativos cortam links grandes. "
+      + "Prefira <b>Copiar link</b> e colar no WhatsApp Web ou no e-mail; teste antes em <b>Pré-visualizar</b>. Se o cliente receber o aviso de link inválido, use Preços = <b>Conforme tabela de vendas vigente</b> e envie a tabela à parte.";
+    ll.classList.remove("hide");
+  } else ll.classList.add("hide");
 }
 
 function mensagemWa(){
   var nome = (val("p_nome").split(" ")[0]) || "";
   var saud = nome ? ("Olá, " + nome + ". ") : "Olá. ";
+  if(MODO === "emp"){
+    return saud + "Aqui é da Mude Imóveis. Preparei a autorização de venda das unidades do empreendimento " + (val("e_nome") || "") + ". "
+       + "É só abrir o link abaixo, conferir os dados do empreendimento, as unidades e as condições, e tocar em \"Autorizo a venda\". "
+       + "O aceite fica registrado com segurança. Qualquer ajuste, me avise antes de confirmar.\n\n" + ultimoLink;
+  }
   return saud
        + "Aqui é da Mude Imóveis. Para concluir a autorização de venda do seu imóvel, preparei tudo para facilitar: "
        + "é só abrir o link abaixo, conferir os dados e tocar em \"Autorizo a venda\". "
@@ -573,6 +926,9 @@ $("btnNovo").addEventListener("click", function(){
   $("c_prazo").value = "Até a venda";
   $("imoveisWrap").innerHTML = "";
   addImovel();
+  document.querySelectorAll("#modoEmp select").forEach(function(s){ s.selectedIndex = 0; });
+  $("e_cidade").value = "Dourados/MS"; UNI = []; $("colarBox").classList.add("hide"); $("linkLongo").classList.add("hide");
+  $("p_tp").value = "PF"; setModo("ind"); atualizaTipoEmp(); atualizaPrecoEmp();
   $("resultado").classList.add("hide");
   ultimoLink = "";
   AUT_ID = null; $("statusDb").textContent = "";
