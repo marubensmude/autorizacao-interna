@@ -212,69 +212,114 @@ function caracHTML(d, fn){
 function imoveisDe(d){ return (d && d.imoveis && d.imoveis.length) ? d.imoveis : ((d && d.imo) ? [d.imo] : []); }
 
 /* ===== EMPREENDIMENTO (bloco idêntico em index.html e aceite.html) ===== */
+/* Perfil do empreendimento (define a legislação citada e se é rural) */
+var EMP_PERFIS = {
+  "Vertical":   { desc: "Residencial vertical (edifício / torres)", lei: ["4591"], padrao: ["Apartamentos"] },
+  "Horizontal": { desc: "Residencial horizontal (condomínio de casas)", lei: ["4591"], padrao: ["Casas"] },
+  "Loteamento": { desc: "Loteamento / condomínio de lotes", lei: ["6766"], padrao: ["Lotes"] },
+  "Chacaras":   { desc: "Condomínio / loteamento de chácaras", lei: ["6766"], rural: true, padrao: ["Chácaras"] },
+  "Pesqueiro":  { desc: "Pesqueiro / ranchos", lei: [], rural: true, padrao: ["Pesqueiro"] },
+  "Comercial":  { desc: "Comercial / corporativo (salas e lojas)", lei: ["4591"], padrao: ["Salas", "Lojas"] },
+  "Misto":      { desc: "Misto / multiuso (residencial + comercial)", lei: ["4591"], padrao: ["Apartamentos", "Salas"] }
+};
+/* Tipos de unidade: cada grupo de unidades do empreendimento usa um destes */
 var EMP_TIPOS = {
-  "Apartamentos": { desc: "Apartamentos (edifício / condomínio vertical)", lei: "4591", rotUn: "unidades autônomas",
+  "Apartamentos": { desc: "Apartamentos", cat: "Residencial", sg: "apartamento", pl: "apartamentos", lei: "4591",
     cols: [["torre","Torre / Bloco"],["un","Unidade","id"],["andar","Andar"],["tipol","Tipologia"],["area","Área privativa (m²)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
-  "Casas": { desc: "Casas (condomínio horizontal / residencial)", lei: "4591", rotUn: "unidades autônomas",
+  "Casas": { desc: "Casas", cat: "Residencial", sg: "casa", pl: "casas", lei: "4591",
     cols: [["qd","Quadra / Rua"],["un","Casa nº","id"],["aterr","Terreno (m²)"],["acons","Construída (m²)"],["tipol","Quartos / Suítes"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
-  "Lotes": { desc: "Lotes (loteamento / condomínio de lotes)", lei: "6766", rotUn: "lotes",
+  "Lotes": { desc: "Lotes residenciais", cat: "Residencial", sg: "lote residencial", pl: "lotes residenciais", lei: "6766",
     cols: [["qd","Quadra","id"],["lt","Lote","id"],["area","Área (m²)"],["frente","Frente (m)"],["fundo","Fundo (m)"],["pos","Posição"],["valor","Valor (R$)","$"]] },
-  "Chácaras": { desc: "Chácaras (condomínio / loteamento de chácaras)", lei: "6766", rural: true, rotUn: "chácaras",
+  "LotesCom": { desc: "Lotes comerciais", cat: "Comercial", sg: "lote comercial", pl: "lotes comerciais", lei: "6766",
+    cols: [["qd","Quadra","id"],["lt","Lote","id"],["area","Área (m²)"],["frente","Frente (m)"],["fundo","Fundo (m)"],["pos","Posição"],["valor","Valor (R$)","$"]] },
+  "Chácaras": { desc: "Chácaras", cat: "Rural / lazer", sg: "chácara", pl: "chácaras", lei: "6766", rural: true,
     cols: [["qd","Quadra / Gleba"],["un","Chácara nº","id"],["area","Área (m² ou ha)"],["frente","Frente (m)"],["benf","Benfeitorias"],["valor","Valor (R$)","$"]] },
-  "Pesqueiro": { desc: "Pesqueiro / ranchos (unidades à beira d'água)", lei: "", rural: true, rotUn: "unidades",
+  "Pesqueiro": { desc: "Ranchos (pesqueiro)", cat: "Rural / lazer", sg: "rancho", pl: "ranchos", lei: "", rural: true,
     cols: [["qd","Setor / Quadra"],["un","Rancho / Unidade","id"],["area","Área (m²)"],["agua","Frente p/ água (m)"],["benf","Benfeitorias"],["valor","Valor (R$)","$"]] },
-  "Salas": { desc: "Salas comerciais / lojas", lei: "4591", rotUn: "unidades autônomas",
-    cols: [["torre","Bloco / Torre"],["un","Sala / Loja","id"],["andar","Andar"],["area","Área privativa (m²)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] }
+  "Salas": { desc: "Salas comerciais", cat: "Comercial", sg: "sala comercial", pl: "salas comerciais", lei: "4591",
+    cols: [["torre","Bloco / Torre"],["un","Sala","id"],["andar","Andar"],["area","Área privativa (m²)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
+  "Lojas": { desc: "Lojas comerciais", cat: "Comercial", sg: "loja", pl: "lojas", lei: "4591",
+    cols: [["torre","Bloco / Torre"],["un","Loja","id"],["andar","Pavimento"],["area","Área privativa (m²)"],["frente","Frente (m)"],["vagas","Vagas"],["valor","Valor (R$)","$"]] },
+  "Vagas": { desc: "Vagas de garagem / hobby box", cat: "Complementar", sg: "vaga / box", pl: "vagas / boxes", lei: "4591",
+    cols: [["torre","Subsolo / Pavimento"],["un","Vaga / Box","id"],["tipo","Tipo (coberta, box...)"],["area","Área (m²)"],["valor","Valor (R$)","$"]] },
+  "Outros": { desc: "Outras unidades", cat: "Outros", sg: "unidade", pl: "outras unidades", lei: "",
+    cols: [["un","Identificação","id"],["desc","Descrição"],["area","Área (m²)"],["valor","Valor (R$)","$"]] }
 };
 function empStr(v){ return String(v == null ? "" : v).trim(); }
+function empEsc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function empReais(v){ var s = empStr(v).replace(/[Rr]\$/, "").trim(); if(s.indexOf(",") >= 0) s = s.split(",")[0]; var n = s.replace(/[^\d]/g, ""); return n ? Number(n) : 0; }
 function empMoeda(n){ return n ? "R$ " + Number(n).toLocaleString("pt-BR") : ""; }
-function empDesc(e){ var t = EMP_TIPOS[e.tipo]; return t ? t.desc : (e.tipo || ""); }
+function empDesc(e){ var p = EMP_PERFIS[e.tipo]; if(p) return p.desc; var t = EMP_TIPOS[e.tipo]; return t ? t.desc : (e.tipo || ""); }
 function empEndereco(e){
   return [e.log ? (e.log + (e.num ? ", " + e.num : "") + (e.comp ? ", " + e.comp : "")) : "", e.bairro, e.cidade, e.cep ? "CEP " + e.cep : ""].filter(Boolean).join(" · ");
 }
-function empRegRot(e){ var t = EMP_TIPOS[e.tipo]; return (t && t.lei === "6766") ? "Registro do loteamento" : "Registro da incorporação"; }
-function empUnidades(e){ return (e && e.uni) ? e.uni : []; }
+/* Grupos de unidades (links antigos tinham um grupo só em e.uni) */
+function empGrupos(e){
+  if(!e) return [];
+  if(e.grupos) return e.grupos;
+  return e.uni && e.uni.length ? [{ t: e.tipo, cab: e.cab, ids: e.ids, vi: e.vi, uni: e.uni }] : [];
+}
+function empUnidades(e){ var a = []; empGrupos(e).forEach(function(g){ a = a.concat(g.uni || []); }); return a; }
+function empTipoG(g){ return EMP_TIPOS[g.t] || { desc: g.t || "Unidades", sg: "unidade", pl: "unidades", lei: "" }; }
+function empPl(g, n){ var t = empTipoG(g); return n + " " + (n === 1 ? t.sg : t.pl); }
+function empLeis(e){
+  var s = {}, p = EMP_PERFIS[e.tipo]; if(p) p.lei.forEach(function(l){ s[l] = 1; });
+  if(!p && EMP_TIPOS[e.tipo] && EMP_TIPOS[e.tipo].lei) s[EMP_TIPOS[e.tipo].lei] = 1;
+  empGrupos(e).forEach(function(g){ var l = empTipoG(g).lei; if(l) s[l] = 1; });
+  return s;
+}
+function empRegRot(e){ var l = empLeis(e); return l["6766"] && !l["4591"] ? "Registro do loteamento" : (l["6766"] && l["4591"] ? "Registro da incorporação / loteamento" : "Registro da incorporação"); }
 /* Rótulo curto da unidade a partir das colunas de identificação (ex.: "Quadra 3 · Lote 12") */
-function empRotUnidade(e, r){
-  var p = []; (e.cab || []).forEach(function(c, i){ if(e.ids && e.ids.indexOf(i) >= 0 && empStr(r[i])) p.push(c + " " + empStr(r[i])); });
+function empRotUnidade(g, r){
+  var p = []; (g.cab || []).forEach(function(c, i){ if(g.ids && g.ids.indexOf(i) >= 0 && empStr(r[i])) p.push(c + " " + empStr(r[i])); });
   return p.join(" · ") || "Unidade";
 }
 /* Demais colunas da unidade em texto corrido (para Gerenciador e WhatsApp) */
-function empDescUnidade(e, r){
-  var p = []; (e.cab || []).forEach(function(c, i){
-    if(e.ids && e.ids.indexOf(i) >= 0) return; var v = empStr(r[i]); if(!v) return;
-    p.push(i === e.vi ? empMoeda(empReais(v)) : (c.replace(/\s*\(R\$\)/, "") + ": " + v));
+function empDescUnidade(g, r){
+  var p = []; (g.cab || []).forEach(function(c, i){
+    if(g.ids && g.ids.indexOf(i) >= 0) return; var v = empStr(r[i]); if(!v) return;
+    p.push(i === g.vi ? empMoeda(empReais(v)) : (c.replace(/\s*\(R\$\)/, "") + ": " + v));
   });
   return p.join(" · ");
 }
-function empVGV(e){ var s = 0; if(e.vi == null || e.vi < 0) return 0; empUnidades(e).forEach(function(r){ s += empReais(r[e.vi]); }); return s; }
+function empVGVg(g){ var s = 0; if(g.vi == null || g.vi < 0) return 0; (g.uni || []).forEach(function(r){ s += empReais(r[g.vi]); }); return s; }
+function empVGV(e){ var s = 0; empGrupos(e).forEach(function(g){ s += empVGVg(g); }); return s; }
+/* "20 apartamentos, 4 salas comerciais e 2 lojas" */
+function empComposicao(e){
+  var p = empGrupos(e).filter(function(g){ return (g.uni || []).length; }).map(function(g){ return empPl(g, g.uni.length); });
+  return p.length > 1 ? p.slice(0, -1).join(", ") + " e " + p[p.length - 1] : (p[0] || "");
+}
+function empTiposTxt(e){
+  var p = empGrupos(e).map(function(g){ return empTipoG(g).desc; });
+  return p.length > 1 ? p.slice(0, -1).join(", ") + " e " + p[p.length - 1] : (p[0] || "");
+}
 function empResumoRows(e){
-  return [["Empreendimento", e.nome], ["Tipo", empDesc(e)], ["Situação", e.sit], ["Previsão de entrega", e.entrega],
+  return [["Empreendimento", e.nome], ["Perfil", empDesc(e)], ["Tipos de unidade", empTiposTxt(e)], ["Situação", e.sit], ["Previsão de entrega", e.entrega],
     ["Endereço", empEndereco(e)], ["Acesso / como chegar", e.acesso], ["Localização no mapa", e.maps],
     ["Total de unidades do empreendimento", e.total], ["Área total", e.areatot],
     ["Matrícula-mãe", e.mat ? (e.mat + (e.cri ? " · " + e.cri : "")) : e.cri], [empRegRot(e), e.reg], ["Alvará / aprovação municipal", e.alv],
     ["Lazer e diferenciais", e.lazer]].filter(function(x){ return empStr(x[1]); });
 }
 function empCondRows(e){
-  var n = empUnidades(e).length, vgv = empVGV(e);
-  return [["Abrangência", e.abr === "todas" ? "Todas as unidades disponíveis do empreendimento" : "Somente as unidades relacionadas neste instrumento"],
-    ["Unidades relacionadas", n ? String(n) : ""],
+  var n = empUnidades(e).length, vgv = empVGV(e), gs = empGrupos(e).filter(function(g){ return (g.uni || []).length; });
+  var rows = [["Abrangência", e.abr === "todas" ? "Todas as unidades disponíveis do empreendimento" : "Somente as unidades relacionadas neste instrumento"],
+    ["Unidades relacionadas", n ? n + (gs.length > 1 ? " (" + empComposicao(e) + ")" : "") : ""],
     ["Preços", e.preco === "tabela" ? "Conforme tabela de vendas vigente da incorporadora" : "Valor informado por unidade"],
-    ["Tabela de referência", e.preco === "tabela" ? e.tab : ""],
-    ["Soma dos valores das unidades (VGV)", vgv ? empMoeda(vgv) : ""],
-    ["Índice de correção", e.ind], ["Financiamento bancário", e.fin], ["Condições de pagamento", e.pgto]].filter(function(x){ return empStr(x[1]); });
+    ["Tabela de referência", e.preco === "tabela" ? e.tab : ""]];
+  if(gs.length > 1) gs.forEach(function(g){ var v = empVGVg(g); if(v) rows.push(["Soma · " + empTipoG(g).desc, empMoeda(v)]); });
+  rows.push(["Soma dos valores das unidades (VGV)", vgv ? empMoeda(vgv) : ""]);
+  rows.push(["Índice de correção", e.ind], ["Financiamento bancário", e.fin], ["Condições de pagamento", e.pgto]);
+  return rows.filter(function(x){ return empStr(x[1]); });
 }
 function empRepTxt(p){
   var r = p && p.rep; if(!r || !empStr(r.nome)) return "";
   return "neste ato representada por <b>" + empEsc(r.nome) + "</b>" + (r.cpf ? ", CPF " + empEsc(r.cpf) : "") + (r.cargo ? ", na qualidade de " + empEsc(r.cargo) : "") + ", ";
 }
-function empEsc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function empTermoHTML(d){
-  var e = d.emp, c = d.com || {}, t = EMP_TIPOS[e.tipo] || {}, rot = t.rotUn || "unidades", n = empUnidades(e).length;
+  var e = d.emp, c = d.com || {}, n = empUnidades(e).length, comp = empComposicao(e);
   var alvo = e.abr === "todas"
-    ? "das " + rot + " disponíveis do empreendimento <b>" + empEsc(e.nome) + "</b>"
-    : "das " + rot + " do empreendimento <b>" + empEsc(e.nome) + "</b> relacionadas neste instrumento" + (n ? " (" + n + (n === 1 ? " unidade" : " unidades") + ")" : "");
+    ? "das unidades disponíveis do empreendimento <b>" + empEsc(e.nome) + "</b>" + (empTiposTxt(e) ? " (" + empEsc(empTiposTxt(e).toLowerCase()) + ")" : "")
+    : "das unidades do empreendimento <b>" + empEsc(e.nome) + "</b> relacionadas neste instrumento" + (n ? " (" + empEsc(comp) + ")" : "");
   var precos = e.preco === "tabela"
     ? "observados os preços da tabela de vendas vigente fornecida pela OUTORGANTE" + (e.tab ? " (" + empEsc(e.tab) + ")" : "")
     : "observados os valores de venda informados para cada unidade";
@@ -287,8 +332,10 @@ function empTermoHTML(d){
     + precos + " e as condições de pagamento por ela estabelecidas, ficando a OUTORGADA autorizada a anunciar, divulgar e apresentar as unidades a interessados, "
     + "utilizar o material de divulgação do empreendimento, agendar e realizar visitas e adotar as providências comerciais cabíveis à concretização dos negócios. "
     + "A OUTORGADA deverá consultar a OUTORGANTE sobre a disponibilidade das unidades no momento em que for feita uma negociação.";
-  var lei = t.lei === "6766" ? "a Lei nº 6.766/1979 (parcelamento do solo urbano), no que couber, "
-          : (t.lei === "4591" ? "a Lei nº 4.591/1964 (incorporações imobiliárias), no que couber, " : "");
+  var l = empLeis(e), leis = [];
+  if(l["4591"]) leis.push("a Lei nº 4.591/1964 (incorporações imobiliárias)");
+  if(l["6766"]) leis.push("a Lei nº 6.766/1979 (parcelamento do solo urbano)");
+  var lei = leis.length ? leis.join(" e ") + ", no que couber, " : "";
   var legal = "Esta autorização observa a Lei nº 6.530/1978 e o Decreto nº 81.871/1978 (exercício da profissão de corretor de imóveis), "
     + "a Resolução COFECI nº 1.404/2018, os artigos 722 a 729 do Código Civil (contrato de corretagem), " + lei
     + "e a Lei nº 13.709/2018 (LGPD). O aceite eletrônico e o respectivo registro de acesso têm fundamento no "
@@ -304,8 +351,10 @@ function empSecoes(d){
   s.push({ t: "1. Incorporadora / Proprietária (Outorgante)", rows: prow, paras: [] });
   s.push({ t: "2. Intermediária (Outorgada)", rows: [["Empresa", "MRM Negócios e Consultorias Imobiliárias Ltda. — Mude Imóveis"], ["CRECI/MS", "6052-J"], ["Sede", "Dourados — MS"], ["Corretor responsável", d.corr ? (d.corr + (CRECI_COR[d.corr] ? " (" + CRECI_COR[d.corr] + ")" : "")) : ""]], paras: [] });
   s.push({ t: "3. Empreendimento objeto da autorização", rows: empResumoRows(e), paras: [] });
-  var us = empUnidades(e);
-  if(us.length) s.push({ t: "4. Unidades autorizadas (" + us.length + ")", rows: us.map(function(u){ return [empRotUnidade(e, u), empDescUnidade(e, u)]; }), paras: [] });
+  empGrupos(e).forEach(function(g, k){
+    if(!(g.uni || []).length) return;
+    s.push({ t: "4." + (k + 1) + " Unidades autorizadas · " + empTipoG(g).desc + " (" + g.uni.length + ")", rows: g.uni.map(function(u){ return [empRotUnidade(g, u), empDescUnidade(g, u)]; }), paras: [] });
+  });
   s.push({ t: "5. Observações", rows: [], paras: d.obs ? [d.obs] : [] });
   s.push({ t: "6. Condições comerciais", rows: [["Comissão", (c.comissao || "5") + "% sobre cada unidade vendida"]].concat(empCondRows(e)), paras: [] });
   s.push({ t: "7. Autorizações e divulgação", rows: [["Modalidade", c.excl === "sim" ? "Com exclusividade" : "Sem exclusividade"], ["Prazo de autorização", c.prazo || ""]], paras: [] });
@@ -313,20 +362,27 @@ function empSecoes(d){
 }
 /* ===== fim do bloco EMPREENDIMENTO ===== */
 
+function empGrupoTitulo(g){ var v = empVGVg(g); return empTipoG(g).desc + " · " + empPl(g, g.uni.length) + (v ? " · " + empMoeda(v) : ""); }
 function empTabelaHTML(e){
-  var us = empUnidades(e); if(!us.length) return "";
-  var h = '<div class="tbl-wrap"><table class="uni"><thead><tr><th>#</th>' + e.cab.map(function(c){ return '<th>' + esc(c) + '</th>'; }).join("") + '</tr></thead><tbody>';
-  h += us.map(function(r, k){ return '<tr><td>' + (k + 1) + '</td>' + e.cab.map(function(c, i){ var v = empStr(r[i]); return i === e.vi ? '<td class="v">' + esc(v ? empMoeda(empReais(v)) : "—") + '</td>' : '<td>' + esc(v || "—") + '</td>'; }).join("") + '</tr>'; }).join("");
-  var vgv = empVGV(e);
-  return h + '</tbody></table></div><div class="tot">' + us.length + (us.length === 1 ? " unidade" : " unidades") + (vgv ? " · Soma dos valores: <b>" + esc(empMoeda(vgv)) + "</b>" : "") + '</div>';
+  var gs = empGrupos(e).filter(function(g){ return (g.uni || []).length; }); if(!gs.length) return "";
+  var h = gs.map(function(g){
+    var t = '<div class="subh" style="font-size:13.5px;margin-top:14px">' + esc(empGrupoTitulo(g)) + '</div><div class="tbl-wrap"><table class="uni"><thead><tr><th>#</th>' + g.cab.map(function(c){ return '<th>' + esc(c) + '</th>'; }).join("") + '</tr></thead><tbody>';
+    t += g.uni.map(function(r, k){ return '<tr><td>' + (k + 1) + '</td>' + g.cab.map(function(c, i){ var v = empStr(r[i]); return i === g.vi ? '<td class="v">' + esc(v ? empMoeda(empReais(v)) : "—") + '</td>' : '<td>' + esc(v || "—") + '</td>'; }).join("") + '</tr>'; }).join("");
+    return t + '</tbody></table></div>';
+  }).join("");
+  var n = empUnidades(e).length, vgv = empVGV(e);
+  return h + '<div class="tot">Total: ' + n + (n === 1 ? " unidade" : " unidades") + (gs.length > 1 ? " (" + esc(empComposicao(e)) + ")" : "") + (vgv ? " · Soma dos valores: <b>" + esc(empMoeda(vgv)) + "</b>" : "") + '</div>';
 }
 function empTabelaEmail(e){
-  var us = empUnidades(e); if(!us.length) return "";
+  var gs = empGrupos(e).filter(function(g){ return (g.uni || []).length; }); if(!gs.length) return "";
   var th = 'style="background:#111;color:#d8b878;font-weight:normal;font-size:11px;padding:6px;text-align:left"', td = 'style="padding:5px 6px;border-top:1px solid #eee;font-size:12.5px"';
-  var h = '<table style="width:100%;border-collapse:collapse;margin-top:6px"><tr><th ' + th + '>#</th>' + e.cab.map(function(c){ return '<th ' + th + '>' + esc(c) + '</th>'; }).join("") + '</tr>';
-  h += us.map(function(r, k){ return '<tr><td ' + td + '>' + (k + 1) + '</td>' + e.cab.map(function(c, i){ var v = empStr(r[i]); return '<td ' + td + '>' + esc(i === e.vi ? (v ? empMoeda(empReais(v)) : "—") : (v || "—")) + '</td>'; }).join("") + '</tr>'; }).join("");
-  var vgv = empVGV(e);
-  return h + '</table><div style="font-size:12px;color:#888;text-align:right;margin-top:4px">' + us.length + (us.length === 1 ? " unidade" : " unidades") + (vgv ? " · Soma dos valores: " + esc(empMoeda(vgv)) : "") + '</div>';
+  var h = gs.map(function(g){
+    var t = '<div style="font-weight:bold;color:#111;font-size:13px;margin-top:10px">' + esc(empGrupoTitulo(g)) + '</div><table style="width:100%;border-collapse:collapse;margin-top:4px"><tr><th ' + th + '>#</th>' + g.cab.map(function(c){ return '<th ' + th + '>' + esc(c) + '</th>'; }).join("") + '</tr>';
+    t += g.uni.map(function(r, k){ return '<tr><td ' + td + '>' + (k + 1) + '</td>' + g.cab.map(function(c, i){ var v = empStr(r[i]); return '<td ' + td + '>' + esc(i === g.vi ? (v ? empMoeda(empReais(v)) : "—") : (v || "—")) + '</td>'; }).join("") + '</tr>'; }).join("");
+    return t + '</table>';
+  }).join("");
+  var n = empUnidades(e).length, vgv = empVGV(e);
+  return h + '<div style="font-size:12px;color:#888;text-align:right;margin-top:6px">Total: ' + n + (n === 1 ? " unidade" : " unidades") + (gs.length > 1 ? " (" + esc(empComposicao(e)) + ")" : "") + (vgv ? " · Soma dos valores: " + esc(empMoeda(vgv)) : "") + '</div>';
 }
 function repLinhas(p, fn){ var r = p && p.rep; if(!r || !r.nome) return ""; return fn("Representante legal", r.nome + (r.cargo ? " (" + r.cargo + ")" : "")) + (r.cpf ? fn("CPF do representante", r.cpf) : ""); }
 
@@ -588,7 +644,7 @@ function confirmarPorWhats(){
   if(d.emp){
     var n = empUnidades(d.emp).length;
     var t2 = "Olá, Mário. Aqui é " + ((d.prop && d.prop.nome) || "a incorporadora") + ". "
-      + "Li e AUTORIZO a venda " + (d.emp.abr === "todas" ? "das unidades disponíveis" : "das " + n + " unidades relacionadas") + " do empreendimento " + (d.emp.nome || "")
+      + "Li e AUTORIZO a venda " + (d.emp.abr === "todas" ? "das unidades disponíveis" : "das unidades relacionadas (" + empComposicao(d.emp) + ")") + " do empreendimento " + (d.emp.nome || "")
       + ", nas condições do link enviado pela Mude Imóveis (protocolo " + (d.id || idDoAceite()) + "). O registro pelo site não concluiu no meu aparelho.";
     tgEvento("Cliente confirmou pelo WhatsApp (fallback)", "");
     return window.open("https://wa.me/5567992022923?text=" + encodeURIComponent(t2), "_blank");
