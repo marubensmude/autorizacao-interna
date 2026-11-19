@@ -212,6 +212,25 @@ table.lista{width:100%;border-collapse:collapse}
   </div>
 </div>
 
+<!-- ================= CONVIDAR CORRETOR ================= -->
+<div class="login-bg hide" id="telaConvite">
+  <div class="login-card">
+    <div class="marca">Mude<b> Imóveis</b></div>
+    <div class="sub">Convidar corretor</div>
+    <div class="login-line"></div>
+    <div style="text-align:left">
+      <label for="cvNome">Nome do corretor</label>
+      <input type="text" id="cvNome" autocomplete="off" placeholder="Nome completo">
+      <label for="cvEmail">E-mail do corretor</label>
+      <input type="email" id="cvEmail" autocomplete="off" placeholder="corretor@mudeimobiliaria.com.br">
+    </div>
+    <div class="login-err" id="cvErr"></div>
+    <button class="btn btn-ouro" style="width:100%;padding:12px;background:var(--dourado);color:#111;border-color:var(--dourado)" id="cvSalvar">Enviar convite</button>
+    <button class="btn" style="width:100%;margin-top:10px;background:transparent;color:#bbb;border-color:#333" id="cvCancelar">Cancelar</button>
+    <div class="login-foot">O corretor recebe um e-mail e define a própria senha. Você não precisa saber a senha dele.</div>
+  </div>
+</div>
+
 <!-- ================= APP ================= -->
 <div id="app" class="hide">
   <header class="topo">
@@ -221,6 +240,7 @@ table.lista{width:100%;border-collapse:collapse}
     <div class="user" id="userEmail"></div>
     <button class="btn btn-sm" id="btnNova" title="Lançar autorização manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Lançar</span></button>
     <a class="btn btn-sm" id="btnInterno" href="index.html" target="_blank" rel="noopener" title="Preencher autorização e gerar link de aceite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>Gerar link</span></a>
+    <button class="btn btn-sm" id="btnConvidar" title="Enviar convite por e-mail para um corretor criar a senha"><span>Convidar corretor</span></button>
     <button class="btn btn-sm" id="btnTrocarSenha" title="Trocar a senha do acesso único Mude"><span>Trocar senha</span></button>
     <button class="btn btn-sm" id="btnSair"><span>Sair</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
   </header>
@@ -904,6 +924,32 @@ $('tsSalvar').addEventListener('click', function(){
     if(r.error){ $('tsErr').textContent = /different|same/i.test(r.error.message) ? 'A nova senha precisa ser diferente da atual.' : r.error.message; return; }
     $('telaSenha').classList.add('hide');
     alert('Senha trocada. A partir de agora ela vale para todos os sistemas do acesso único Mude.');
+  });
+});
+$('btnConvidar').addEventListener('click', function(){ $('cvEmail').value = ''; $('cvNome').value = ''; $('cvErr').textContent = ''; $('telaConvite').classList.remove('hide'); setTimeout(function(){ $('cvNome').focus(); }, 50); });
+$('cvCancelar').addEventListener('click', function(){ $('telaConvite').classList.add('hide'); });
+$('cvSalvar').addEventListener('click', function(){
+  var email = $('cvEmail').value.trim().toLowerCase(), nome = $('cvNome').value.trim();
+  if(!nome){ $('cvErr').textContent = 'Informe o nome do corretor.'; return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('cvErr').textContent = 'Informe um e-mail válido.'; return; }
+  $('cvSalvar').disabled = true; $('cvSalvar').textContent = 'Enviando…'; $('cvErr').textContent = '';
+  sb.auth.getSession().then(function(r){
+    var token = r.data && r.data.session && r.data.session.access_token;
+    return fetch(SUPABASE_URL + '/functions/v1/convidar-corretor', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, nome: nome })
+    });
+  }).then(function(res){
+    return res.json().catch(function(){ return {}; }).then(function(j){ return { ok: res.ok, j: j }; });
+  }).then(function(x){
+    $('cvSalvar').disabled = false; $('cvSalvar').textContent = 'Enviar convite';
+    if(!x.ok){ $('cvErr').textContent = x.j.erro || 'Não foi possível enviar o convite.'; return; }
+    $('telaConvite').classList.add('hide');
+    toast('Convite enviado para ' + email + '.');
+  }).catch(function(){
+    $('cvSalvar').disabled = false; $('cvSalvar').textContent = 'Enviar convite';
+    $('cvErr').textContent = 'Falha de conexão. Tente de novo.';
   });
 });
 $('btnAtualizar').addEventListener('click', function(){ carregar().then(function(){ toast('Lista atualizada.'); }); });

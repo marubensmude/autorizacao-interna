@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definir senha · Mude Imóveis</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111;color:#eee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .card{width:min(92vw,360px);padding:32px 28px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;text-align:center}
+  .marca{font-size:26px;letter-spacing:1px;margin-bottom:4px}
+  .marca b{color:#c9a84c}
+  .sub{color:#aaa;font-size:14px;margin-bottom:22px}
+  label{display:block;text-align:left;font-size:13px;color:#bbb;margin:12px 0 6px}
+  input{width:100%;box-sizing:border-box;padding:11px 12px;background:#111;border:1px solid #333;border-radius:8px;color:#eee;font-size:15px}
+  button{width:100%;margin-top:18px;padding:12px;background:#c9a84c;color:#111;border:0;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .err{color:#ff8a80;font-size:13px;min-height:18px;margin-top:10px}
+  .ok{color:#9ccc65;font-size:14px;line-height:1.5;margin-top:14px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="marca">Mude<b> Imóveis</b></div>
+  <div class="sub">Definir sua senha de acesso</div>
+
+  <div id="form">
+    <label for="nova">Nova senha</label>
+    <input type="password" id="nova" autocomplete="new-password" placeholder="mínimo 8 caracteres">
+    <label for="nova2">Confirmar nova senha</label>
+    <input type="password" id="nova2" autocomplete="new-password">
+    <div class="err" id="erro"></div>
+    <button id="salvar">Salvar senha</button>
+  </div>
+
+  <div id="pronto" class="ok hide">
+    Senha criada. Use este e-mail e esta senha nos sistemas do acesso único Mude Imóveis.
+  </div>
+  <div id="sem-convite" class="err hide">
+    Este link expirou ou já foi usado. Peça um novo convite ao administrador.
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL = 'https://ghbikzuttsvqvzxsqkbu.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_RcR_4O-TwJ4vVCGZiCjv_g_rsrs-En4';
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* Ao abrir pelo link do convite, o Supabase cria a sessão a partir do endereço (#access_token). */
+sb.auth.getSession().then(function(r){
+  var s = r && r.data && r.data.session;
+  if(!s){ document.getElementById('form').classList.add('hide'); document.getElementById('sem-convite').classList.remove('hide'); }
+});
+
+document.getElementById('salvar').addEventListener('click', function(){
+  var a = document.getElementById('nova').value, b = document.getElementById('nova2').value;
+  var erro = document.getElementById('erro'); erro.textContent = '';
+  if(a.length < 8){ erro.textContent = 'Use pelo menos 8 caracteres.'; return; }
+  if(a !== b){ erro.textContent = 'As duas senhas não conferem.'; return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Salvando…';
+  sb.auth.updateUser({ password: a }).then(function(r){
+    btn.disabled = false; btn.textContent = 'Salvar senha';
+    if(r.error){ erro.textContent = r.error.message; return; }
+    sb.auth.signOut().then(function(){
+      document.getElementById('form').classList.add('hide');
+      document.getElementById('pronto').classList.remove('hide');
+    });
+  });
+});
+</script>
+</body>
+</html>
