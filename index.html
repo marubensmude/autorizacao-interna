@@ -88,9 +88,14 @@ table.uni input.u-money{min-width:130px}
   <div class="marca">Mude<b>.</b></div>
   <p>Área interna</p>
   <input type="email" id="gEmail" placeholder="E-mail" autocomplete="username" style="margin-bottom:10px">
-  <input type="password" id="senha" placeholder="Senha" autocomplete="current-password">
+  <div style="position:relative;width:100%;max-width:300px">
+    <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding-right:64px">
+    <button type="button" id="btnVerSenha" aria-label="Mostrar senha" title="Mostrar senha" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;color:#888;font-size:12px;padding:6px">Mostrar</button>
+  </div>
   <button class="btn btn-ouro" id="btnEntrar">Entrar</button>
   <div class="err" id="gateErr"></div>
+  <a href="#" id="linkEsqueci" style="display:block;margin-top:10px;color:#b8962e;font-size:13px;text-align:center;text-decoration:none">Esqueci minha senha</a>
+  <div id="gateInfo" style="color:#2e7d32;font-size:13px;margin-top:8px;text-align:center;max-width:300px;line-height:1.4"></div>
   <div style="color:#888;font-size:12px;margin-top:14px;text-align:center;max-width:300px;line-height:1.5">Acesso único Mude Imóveis: o mesmo e-mail e senha do Gerenciador, do Checklist e do Simulador de Vendas.</div>
 </div>
 
@@ -282,6 +287,29 @@ function entrar(){
   sbLogin.auth.getSession().then(function(r){ var s = r && r.data && r.data.session; if(s && s.user) liberarApp(s.user); else setTimeout(function(){ $("gEmail").focus(); }, 50); });
 })();
 $("btnEntrar").addEventListener("click", entrar);
+
+/* Mostrar/ocultar a senha digitada */
+$("btnVerSenha").addEventListener("click", function(){
+  var s = $("senha"); var mostrar = s.type === "password";
+  s.type = mostrar ? "text" : "password";
+  this.textContent = mostrar ? "Ocultar" : "Mostrar";
+  var rotulo = mostrar ? "Ocultar senha" : "Mostrar senha";
+  this.setAttribute("aria-label", rotulo); this.title = rotulo;
+});
+
+/* Esqueci minha senha: envia o link de redefinicao. O link leva para a página de definir senha. */
+function esqueciSenha(e){
+  e.preventDefault();
+  $("gateErr").textContent = ""; $("gateInfo").textContent = "";
+  if(!sbLogin){ $("gateErr").textContent = "Serviço de login não carregou. Verifique a internet e recarregue."; return; }
+  var email = $("gEmail").value.trim().toLowerCase();
+  if(!email){ $("gateErr").textContent = "Digite seu e-mail no campo acima e clique de novo em Esqueci minha senha."; return; }
+  sbLogin.auth.resetPasswordForEmail(email, { redirectTo: SITE_BASE + "definir-senha.html" }).then(function(r){
+    if(r.error){ $("gateErr").textContent = r.error.message; return; }
+    $("gateInfo").textContent = "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha.";
+  });
+}
+$("linkEsqueci").addEventListener("click", esqueciSenha);
 $("senha").addEventListener("keydown", function(e){ if(e.key === "Enter") entrar(); });
 $("gEmail").addEventListener("keydown", function(e){ if(e.key === "Enter") $("senha").focus(); });
 
